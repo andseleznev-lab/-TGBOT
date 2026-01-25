@@ -487,15 +487,21 @@ async function loadAvailableSlots(serviceName, date) {
             slotsArray = result.slots.array;
         }
         
-        // Преобразуем {"0":"id", "2":"time"} → {time: "10:00"}
-        State.availableSlots = slotsArray
+        // Преобразуем {"0":"id", "1":"date", "2":"time"} → {id, date, time}
+        const allSlots = slotsArray
             .map(slot => ({
                 id: slot["0"] || slot.id,
+                date: slot["1"] || slot.date,
                 time: slot["2"] || slot.time
             }))
-            .filter(s => s.time);
+            .filter(s => s.time && s.date);
         
-        console.log('✅ Обработанные слоты:', State.availableSlots);
+        console.log('✅ Все слоты:', allSlots);
+        
+        // ✅ ФИЛЬТРУЕМ только слоты для выбранной даты
+        State.availableSlots = allSlots.filter(slot => slot.date === date);
+        
+        console.log('🎯 Слоты для даты', date, ':', State.availableSlots);
     } catch (error) {
         console.error('❌ Ошибка загрузки слотов:', error);
         State.availableSlots = [];
