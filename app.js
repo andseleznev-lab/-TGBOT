@@ -329,7 +329,12 @@ async function selectService(serviceName) {
     State.currentTab = 'booking';
     
     switchTab('booking');
+    showLoader();
     await loadAvailableDates(serviceName);
+    hideLoader();
+    
+    // ✅ Перерисовываем экран после загрузки дат
+    renderBookingScreen();
 }
 
 async function handleServiceSelect(serviceName) {
