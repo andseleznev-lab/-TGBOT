@@ -438,6 +438,11 @@ async function loadAvailableDates(serviceName) {
             slots_count: 1      // Всегда доступна
         }));
         
+        // ✅ Очищаем выбранную дату и слот при загрузке новых дат
+        State.selectedDate = null;
+        State.selectedSlot = null;
+        State.availableSlots = [];
+        
         console.log('✅ Обработанные даты (State.availableDates):', State.availableDates);
         console.log('🎯 Set для календаря:', Array.from(new Set(State.availableDates.map(d => d.date))));
         
