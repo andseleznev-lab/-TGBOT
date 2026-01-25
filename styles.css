@@ -422,15 +422,29 @@ body {
 }
 
 .calendar-day.available {
-    border-color: var(--accent-light);
-    color: var(--text-primary);
+    background: linear-gradient(135deg, #A8C686, #C5E1A5) !important;
+    border: 3px solid #7FA860 !important;
+    color: var(--text-primary) !important;
+    font-weight: 700 !important;
+    box-shadow: 0 4px 12px rgba(168, 198, 134, 0.5) !important;
+    animation: pulse-available 2s ease-in-out infinite !important;
+}
+
+@keyframes pulse-available {
+    0%, 100% {
+        box-shadow: 0 4px 12px rgba(168, 198, 134, 0.5);
+    }
+    50% {
+        box-shadow: 0 6px 20px rgba(168, 198, 134, 0.7);
+    }
 }
 
 .calendar-day.available:hover {
     background: var(--accent-gradient);
     color: var(--text-white);
     border-color: var(--accent-primary);
-    transform: scale(1.05);
+    transform: scale(1.1);
+    box-shadow: 0 6px 16px rgba(212, 165, 116, 0.6) !important;
 }
 
 .calendar-day.selected {
@@ -460,7 +474,10 @@ body {
 }
 
 .calendar-day.available .slots-indicator {
-    background: var(--success);
+    background: #FF5722 !important;
+    width: 8px;
+    height: 8px;
+    box-shadow: 0 0 8px rgba(255, 87, 34, 0.8);
 }
 
 .calendar-day.selected .slots-indicator {
