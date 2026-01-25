@@ -328,12 +328,16 @@ async function selectService(serviceName) {
     State.selectedService = serviceName;
     State.currentTab = 'booking';
     
-    switchTab('booking');
+    // ✅ Меняем активную вкладку БЕЗ рендера
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === 'booking');
+    });
+    
     showLoader();
     await loadAvailableDates(serviceName);
     hideLoader();
     
-    // ✅ Перерисовываем экран после загрузки дат
+    // ✅ Рендерим ПОСЛЕ загрузки дат
     renderBookingScreen();
 }
 
