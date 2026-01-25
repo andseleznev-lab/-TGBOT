@@ -416,7 +416,11 @@ async function loadServices() {
 async function loadAvailableDates(serviceName) {
     try {
         const result = await BookingAPI.getAvailableDates(serviceName);
-        State.availableDates = (result.dates || []).filter(d => d.slots_count > 0);
+        // Преобразуем массив строк в массив объектов для совместимости с календарём
+        State.availableDates = (result.dates || []).map(date => ({ 
+            date: typeof date === 'string' ? date : date.date, 
+            slots_count: typeof date === 'string' ? 1 : (date.slots_count || 1)
+        }));
     } catch (error) {
         State.availableDates = [];
         tg.showAlert('Не удалось загрузить доступные даты');
