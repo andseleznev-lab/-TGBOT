@@ -429,12 +429,20 @@ async function loadServices() {
 async function loadAvailableDates(serviceName) {
     try {
         const result = await BookingAPI.getAvailableDates(serviceName);
-        // Преобразуем массив строк в массив объектов для совместимости с календарём
-        State.availableDates = (result.dates || []).map(date => ({ 
-            date: typeof date === 'string' ? date : date.date, 
-            slots_count: typeof date === 'string' ? 1 : (date.slots_count || 1)
+        console.log('📥 RAW ответ от Make:', result);
+        console.log('📥 Массив дат от Make:', result.dates);
+        
+        // ✅ ИСПРАВЛЕНИЕ: преобразуем строки в объекты
+        State.availableDates = (result.dates || []).map(dateStr => ({ 
+            date: dateStr,      // "28.01.2026"
+            slots_count: 1      // Всегда доступна
         }));
+        
+        console.log('✅ Обработанные даты (State.availableDates):', State.availableDates);
+        console.log('🎯 Set для календаря:', Array.from(new Set(State.availableDates.map(d => d.date))));
+        
     } catch (error) {
+        console.error('❌ Ошибка загрузки дат:', error);
         State.availableDates = [];
         tg.showAlert('Не удалось загрузить доступные даты');
     }
