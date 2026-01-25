@@ -475,42 +475,8 @@ async function loadAvailableDates(serviceName) {
 async function loadAvailableSlots(serviceName, date) {
     try {
         const result = await BookingAPI.getAvailableSlots(serviceName, date);
-        console.log('📥 RAW slots от Make:', result.slots);
-        
-        // ✅ Make возвращает объекты через запятую (не массив!)
-        // Нужно собрать их в массив
-        let slotsArray = [];
-        
-        if (Array.isArray(result.slots)) {
-            // Если уже массив
-            slotsArray = result.slots;
-        } else if (result.slots && result.slots.array) {
-            // Если объект с .array
-            slotsArray = Array.isArray(result.slots.array) ? result.slots.array : [result.slots.array];
-        } else if (result.slots && typeof result.slots === 'object') {
-            // Если объект — преобразуем в массив значений
-            slotsArray = Object.values(result.slots);
-        }
-        
-        console.log('🔄 Slots как массив:', slotsArray);
-        
-        // Преобразуем {"0":"id", "1":"date", "2":"time"} → {id, date, time}
-        const allSlots = slotsArray
-            .map(slot => ({
-                id: slot["0"] || slot.id,
-                date: slot["1"] || slot.date,
-                time: slot["2"] || slot.time
-            }))
-            .filter(s => s.time && s.date);
-        
-        console.log('✅ Все слоты:', allSlots);
-        
-        // ✅ ФИЛЬТРУЕМ только слоты для выбранной даты
-        State.availableSlots = allSlots.filter(slot => slot.date === date);
-        
-        console.log('🎯 Слоты для даты', date, ':', State.availableSlots);
+        State.availableSlots = (result.slots || []).filter(s => s && s.time);
     } catch (error) {
-        console.error('❌ Ошибка загрузки слотов:', error);
         State.availableSlots = [];
         tg.showAlert('Не удалось загрузить свободные слоты');
     }
