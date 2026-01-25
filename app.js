@@ -475,8 +475,24 @@ async function loadAvailableDates(serviceName) {
 async function loadAvailableSlots(serviceName, date) {
     try {
         const result = await BookingAPI.getAvailableSlots(serviceName, date);
-        State.availableSlots = (result.slots || []).filter(s => s && s.time);
+        console.log('📥 RAW slots от Make:', result.slots);
+        
+        // ✅ Make возвращает объекты с числовыми индексами: {"0":"id", "2":"time"}
+        // Преобразуем в формат {time: "10:00"}
+        if (Array.isArray(result.slots)) {
+            State.availableSlots = result.slots
+                .map(slot => ({
+                    id: slot["0"] || slot.id,
+                    time: slot["2"] || slot.time
+                }))
+                .filter(s => s.time);
+        } else {
+            State.availableSlots = [];
+        }
+        
+        console.log('✅ Обработанные слоты:', State.availableSlots);
     } catch (error) {
+        console.error('❌ Ошибка загрузки слотов:', error);
         State.availableSlots = [];
         tg.showAlert('Не удалось загрузить свободные слоты');
     }
