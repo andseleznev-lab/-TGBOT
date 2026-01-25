@@ -1,0 +1,655 @@
+/* ===== ОСНОВНЫЕ ПЕРЕМЕННЫЕ ===== */
+:root {
+    --bg-primary: linear-gradient(135deg, #FAF3E0 0%, #F5E6D3 100%);
+    --bg-secondary: #FFF8F0;
+    --glass-bg: rgba(255, 252, 248, 0.4);
+    --glass-bg-hover: rgba(255, 252, 248, 0.6);
+    --glass-border: rgba(212, 165, 116, 0.2);
+    --glass-shadow: 0 8px 32px 0 rgba(139, 116, 95, 0.15);
+    --glass-shadow-hover: 0 12px 40px 0 rgba(139, 116, 95, 0.25);
+    --accent-primary: #D4A574;
+    --accent-secondary: #B8956A;
+    --accent-gradient: linear-gradient(135deg, #D4A574 0%, #B8956A 100%);
+    --accent-light: #E8D5B7;
+    --text-primary: #4A4238;
+    --text-secondary: #8B7460;
+    --text-light: #A89580;
+    --text-white: #FFFFFF;
+    --success: #A8C686;
+    --success-light: rgba(168, 198, 134, 0.2);
+    --error: #D89595;
+    --error-light: rgba(216, 149, 149, 0.2);
+    --warning: #E8C4A0;
+    --border-radius: 20px;
+    --border-radius-lg: 28px;
+    --spacing-xs: 8px;
+    --spacing-sm: 12px;
+    --spacing-md: 16px;
+    --spacing-lg: 24px;
+    --spacing-xl: 32px;
+    --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg-primary);
+    background-attachment: fixed;
+    color: var(--text-primary);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    padding-bottom: 80px;
+}
+
+#app {
+    min-height: 100vh;
+    padding: 24px 16px;
+    padding-bottom: 100px;
+}
+
+/* ===== LOADER ===== */
+.loader-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 60vh;
+    gap: 16px;
+}
+
+.glass-loader {
+    width: 60px;
+    height: 60px;
+    border: 4px solid var(--glass-border);
+    border-top-color: var(--accent-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    box-shadow: var(--glass-shadow);
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.loader-container p {
+    color: var(--text-secondary);
+    font-size: 16px;
+    font-weight: 500;
+}
+
+/* ===== ЗАГОЛОВКИ ===== */
+.screen-title {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 24px;
+    letter-spacing: -0.5px;
+}
+
+.section-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 16px;
+    margin-top: 24px;
+}
+
+/* ===== GLASSMORPHISM КАРТОЧКИ ===== */
+.glass-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-radius: var(--border-radius-lg);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+    transition: all var(--transition-normal);
+    overflow: hidden;
+}
+
+.glass-card:hover {
+    background: var(--glass-bg-hover);
+    box-shadow: var(--glass-shadow-hover);
+    transform: translateY(-2px);
+}
+
+.glass-card:active {
+    transform: translateY(0);
+}
+
+/* ===== ЭКРАН УСЛУГ ===== */
+.services-grid {
+    display: grid;
+    gap: 16px;
+    margin-bottom: 32px;
+}
+
+.service-card {
+    padding: 24px;
+    cursor: pointer;
+    position: relative;
+}
+
+.service-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--accent-gradient);
+    border-radius: 28px 28px 0 0;
+    opacity: 0;
+    transition: opacity var(--transition-normal);
+}
+
+.service-card:hover::before {
+    opacity: 1;
+}
+
+.service-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 12px;
+}
+
+.service-icon {
+    font-size: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 60px;
+    height: 60px;
+    background: var(--glass-bg);
+    border-radius: 16px;
+    border: 1px solid var(--glass-border);
+}
+
+.service-info {
+    flex: 1;
+}
+
+.service-name {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.service-duration {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.service-description {
+    font-size: 15px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin-bottom: 16px;
+}
+
+.service-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--glass-border);
+}
+
+.service-price {
+    font-size: 24px;
+    font-weight: 700;
+    background: var(--accent-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.service-price.free {
+    color: var(--success);
+    -webkit-text-fill-color: var(--success);
+}
+
+.service-btn {
+    padding: 10px 20px;
+    background: var(--accent-gradient);
+    color: var(--text-white);
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    box-shadow: 0 4px 12px rgba(212, 165, 116, 0.3);
+}
+
+.service-btn:hover {
+    box-shadow: 0 6px 16px rgba(212, 165, 116, 0.4);
+    transform: translateY(-1px);
+}
+
+.service-btn:active {
+    transform: translateY(0);
+}
+
+/* ===== ЭКРАН ОПЛАТЫ ===== */
+.payment-grid {
+    display: grid;
+    gap: 16px;
+}
+
+.payment-card {
+    padding: 24px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.payment-icon {
+    font-size: 32px;
+    width: 56px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--glass-bg);
+    border-radius: 14px;
+    border: 1px solid var(--glass-border);
+}
+
+.payment-info {
+    flex: 1;
+}
+
+.payment-name {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.payment-description {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.payment-arrow {
+    font-size: 24px;
+    color: var(--accent-primary);
+}
+
+/* ===== ЭКРАН БРОНИРОВАНИЯ ===== */
+.booking-container {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.service-selector {
+    padding: 16px;
+}
+
+.service-select {
+    width: 100%;
+    padding: 16px;
+    background: var(--glass-bg);
+    border: 2px solid var(--glass-border);
+    border-radius: 20px;
+    font-size: 16px;
+    color: var(--text-primary);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23D4A574' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 16px center;
+    padding-right: 40px;
+}
+
+.service-select:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 4px rgba(212, 165, 116, 0.1);
+}
+
+/* ===== КАЛЕНДАРЬ ===== */
+.calendar-container {
+    padding: 24px;
+}
+
+.calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.calendar-month {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.calendar-nav {
+    display: flex;
+    gap: 12px;
+}
+
+.calendar-nav-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    color: var(--accent-primary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    transition: all var(--transition-fast);
+}
+
+.calendar-nav-btn:hover {
+    background: var(--accent-light);
+}
+
+.calendar-nav-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    margin-bottom: 12px;
+}
+
+.weekday {
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    padding: 8px;
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+}
+
+.calendar-day {
+    aspect-ratio: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    position: relative;
+    background: var(--glass-bg);
+    border: 1px solid transparent;
+}
+
+.calendar-day.empty {
+    background: transparent;
+    cursor: default;
+}
+
+.calendar-day.past {
+    color: var(--text-light);
+    opacity: 0.4;
+    cursor: not-allowed;
+    background: transparent;
+}
+
+.calendar-day.available {
+    border-color: var(--accent-light);
+    color: var(--text-primary);
+}
+
+.calendar-day.available:hover {
+    background: var(--accent-gradient);
+    color: var(--text-white);
+    border-color: var(--accent-primary);
+    transform: scale(1.05);
+}
+
+.calendar-day.selected {
+    background: var(--accent-gradient);
+    color: var(--text-white);
+    border-color: var(--accent-primary);
+    box-shadow: 0 4px 12px rgba(212, 165, 116, 0.4);
+}
+
+.calendar-day.disabled {
+    color: var(--text-light);
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.day-number {
+    font-size: 15px;
+}
+
+.slots-indicator {
+    position: absolute;
+    bottom: 4px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent-primary);
+}
+
+.calendar-day.available .slots-indicator {
+    background: var(--success);
+}
+
+.calendar-day.selected .slots-indicator {
+    background: var(--text-white);
+}
+
+/* ===== СЛОТЫ ВРЕМЕНИ ===== */
+.slots-container {
+    padding: 24px;
+}
+
+.slots-date {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 16px;
+}
+
+.slots-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 12px;
+}
+
+.slot-btn {
+    padding: 16px;
+    background: var(--glass-bg);
+    border: 2px solid var(--glass-border);
+    border-radius: 20px;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    text-align: center;
+}
+
+.slot-btn:hover {
+    background: var(--accent-light);
+    border-color: var(--accent-primary);
+    transform: scale(1.05);
+}
+
+.slot-btn.selected {
+    background: var(--accent-gradient);
+    border-color: var(--accent-primary);
+    color: var(--text-white);
+    box-shadow: 0 4px 12px rgba(212, 165, 116, 0.3);
+}
+
+.slot-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.slots-empty {
+    text-align: center;
+    padding: 32px;
+    color: var(--text-secondary);
+    font-size: 16px;
+}
+
+/* ===== КНОПКА ПОДТВЕРЖДЕНИЯ ===== */
+.confirm-button {
+    width: 100%;
+    padding: 18px;
+    background: var(--accent-gradient);
+    border: none;
+    border-radius: 20px;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-white);
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    box-shadow: 0 8px 24px rgba(212, 165, 116, 0.3);
+    margin-top: 24px;
+}
+
+.confirm-button:hover {
+    box-shadow: 0 12px 32px rgba(212, 165, 116, 0.4);
+    transform: translateY(-2px);
+}
+
+.confirm-button:active {
+    transform: translateY(0);
+}
+
+.confirm-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* ===== TAB BAR ===== */
+.tab-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-around;
+    background: var(--glass-bg);
+    backdrop-filter: blur(30px) saturate(180%);
+    -webkit-backdrop-filter: blur(30px) saturate(180%);
+    border-top: 1px solid var(--glass-border);
+    padding: 12px 8px;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+    box-shadow: 0 -8px 32px rgba(139, 116, 95, 0.1);
+    z-index: 1000;
+}
+
+.tab-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    background: none;
+    border: none;
+    padding: 8px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: all var(--transition-fast);
+    border-radius: 12px;
+}
+
+.tab-btn:hover {
+    background: var(--glass-bg);
+}
+
+.tab-btn.active {
+    color: var(--accent-primary);
+}
+
+.tab-icon {
+    width: 24px;
+    height: 24px;
+    stroke-width: 2;
+}
+
+.tab-btn span {
+    font-size: 12px;
+    font-weight: 500;
+}
+
+/* ===== УТИЛИТЫ ===== */
+.hidden {
+    display: none !important;
+}
+
+.fade-in {
+    animation: fadeIn var(--transition-normal) ease-in;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ===== АДАПТИВНОСТЬ ===== */
+@media (max-width: 380px) {
+    .screen-title {
+        font-size: 28px;
+    }
+    
+    .service-name {
+        font-size: 18px;
+    }
+    
+    .slots-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (min-width: 768px) {
+    #app {
+        max-width: 600px;
+        margin: 0 auto;
+    }
+    
+    .tab-bar {
+        max-width: 600px;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+}
