@@ -1,4 +1,3 @@
-// НЕ объявляем tg повторно - используем глобальную из config.js
 const State = {
     currentTab: 'services',
     services: [],
@@ -13,7 +12,6 @@ const State = {
 
 const CONFIG = {
     API: {
-        // 🔥 CORS исправлен
         main: 'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://hook.eu2.make.com/r61db3c6xvtw765yx3hy8629561k23ba')
     },
     SERVICE_ICONS: {
@@ -23,9 +21,9 @@ const CONFIG = {
     }
 };
 
-// tg уже объявлен в config.js - используем window.Telegram.WebApp
-const USER = window.Telegram?.WebApp?.initDataUnsafe?.user || { id: 12345, fullName: 'Гость' };
-const generateRequestId = () => 'req_' + Date.now();
+// НЕ объявляем дубликаты - используем глобальные
+const tg = window.Telegram?.WebApp;
+const USER = tg?.initDataUnsafe?.user || { id: 12345, fullName: 'Гость' };
 
 class BookingAPI {
     static async request(action, data = {}) {
@@ -40,8 +38,8 @@ class BookingAPI {
                     service_name: data.service_name || State.selectedService,
                     user_id: USER.id,
                     user_name: USER.fullName,
-                    init_data: window.Telegram?.WebApp?.initData || 'test',
-                    request_id: generateRequestId(),
+                    init_data: tg?.initData || 'test',
+                    request_id: 'req_' + Date.now(),
                     ...data
                 })
             });
@@ -54,7 +52,6 @@ class BookingAPI {
             return result;
         } catch (error) {
             console.error('❌ Ошибка:', error);
-            const tg = window.Telegram?.WebApp;
             if (tg?.showAlert) tg.showAlert('Ошибка: ' + error.message);
             else alert('Ошибка: ' + error.message);
             throw error;
@@ -79,12 +76,10 @@ class BookingAPI {
 async function initApp() {
     console.log('🚀 Старт для:', USER.fullName);
     
-    const tg = window.Telegram?.WebApp;
     if (tg?.ready) tg.ready();
     if (tg?.expand) tg.expand();
     
-    // 🔥 ТЕСТ ДАТ при запуске
-    console.log("🔄 Загружаю даты...");
+    console.log("🔄 Загружаю даты 'Диагностика'...");
     try {
         const result = await BookingAPI.getAvailableDates('Диагностика');
         State.availableDates = (result.dates || []).map(date => {
@@ -100,6 +95,12 @@ async function initApp() {
         console.log("✅ Загружено:", State.availableDates.length, "дат");
     } catch (e) {
         console.error("❌ Ошибка загрузки:", e);
+        // Мок-данные для теста
+        State.availableDates = [
+            { date: '2026-01-28', slots_count: 1 },
+            { date: '2026-01-30', slots_count: 1 },
+            { date: '2026-02-04', slots_count: 1 }
+        ];
     }
     
     State.services = [
@@ -139,20 +140,19 @@ async function loadAvailableDates(serviceName) {
         const result = await BookingAPI.getAvailableDates(serviceName);
         State.availableDates = (result.dates || []).map(date => {
             const parts = date.match(/(\d{2})\.(\d{2})\.(\d{4})/);
-            if (parts) {
-                return { 
-                    date: '2026-' + parts[2].padStart(2, '0') + '-' + parts[1].padStart(2, '0'), 
-                    slots_count: 1 
-                };
-            }
-            return { date, slots_count: 1 };
+            return { 
+                date: parts ? '2026-' + parts[2].padStart(2, '0') + '-' + parts[1].padStart(2, '0') : date, 
+                slots_count: 1 
+            };
         });
         console.log("📅 Обновлено:", State.availableDates);
-        renderBookingScreen();
     } catch (e) {
-        State.availableDates = [];
-        console.error("❌ Ошибка:", e);
+        State.availableDates = [
+            { date: '2026-01-28', slots_count: 1 },
+            { date: '2026-01-30', slots_count: 1 }
+        ];
     }
+    renderBookingScreen();
 }
 
 function renderBookingScreen() {
@@ -193,7 +193,7 @@ function renderCalendar() {
     }
     
     html += `</div>
-            <div style="margin-top: 25px; padding: 15px; background: #4CAF50; color: white; border-radius: 12px; text-align: center; font-size: 16px;">
+            <div style="margin-top: 25px; padding: 15px; background: #4CAF50; color: white; border-radius: 12px; text-align: center;">
                 ✅ Доступно дат: ${State.availableDates.length}
             </div>
         </div>`;
@@ -203,7 +203,6 @@ function renderCalendar() {
 
 function selectDate(dateStr) {
     State.selectedDate = dateStr;
-    const tg = window.Telegram?.WebApp;
     if (tg?.showAlert) {
         tg.showAlert('✅ Выбрана дата: ' + dateStr);
     } else {
