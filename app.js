@@ -477,18 +477,23 @@ async function loadAvailableSlots(serviceName, date) {
         const result = await BookingAPI.getAvailableSlots(serviceName, date);
         console.log('📥 RAW slots от Make:', result.slots);
         
-        // ✅ Make возвращает объекты с числовыми индексами: {"0":"id", "2":"time"}
-        // Преобразуем в формат {time: "10:00"}
+        // ✅ Make возвращает {array: [...], __IMTAGGLENGTH__: N}
+        // Берём массив из .array
+        let slotsArray = [];
+        
         if (Array.isArray(result.slots)) {
-            State.availableSlots = result.slots
-                .map(slot => ({
-                    id: slot["0"] || slot.id,
-                    time: slot["2"] || slot.time
-                }))
-                .filter(s => s.time);
-        } else {
-            State.availableSlots = [];
+            slotsArray = result.slots;
+        } else if (result.slots && Array.isArray(result.slots.array)) {
+            slotsArray = result.slots.array;
         }
+        
+        // Преобразуем {"0":"id", "2":"time"} → {time: "10:00"}
+        State.availableSlots = slotsArray
+            .map(slot => ({
+                id: slot["0"] || slot.id,
+                time: slot["2"] || slot.time
+            }))
+            .filter(s => s.time);
         
         console.log('✅ Обработанные слоты:', State.availableSlots);
     } catch (error) {
