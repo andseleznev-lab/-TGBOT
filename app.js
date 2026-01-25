@@ -197,6 +197,7 @@ function renderBookingScreen() {
 }
 
 // Рендер календаря
+// Рендер календаря с форматом DD.MM.YYYY для Make.com
 function renderCalendar() {
     if (!State.selectedService) return '';
     
@@ -211,11 +212,14 @@ function renderCalendar() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
+    // ✅ Преобразуем даты из Make.com формата (DD.MM.YYYY) в Set для быстрого поиска
     const availableDatesSet = new Set(
         State.availableDates
             .filter(d => d.slots_count > 0)
-            .map(d => d.date)
+            .map(d => d.date) // Даты уже в формате "28.01.2026"
     );
+    
+    console.log('🎯 Доступные даты для календаря:', Array.from(availableDatesSet));
     
     let calendarHTML = `
         <div class="glass-card calendar-container fade-in" style="margin-top: 16px;">
@@ -245,9 +249,15 @@ function renderCalendar() {
     
     for (let day = 1; day <= daysInMonth; day++) {
         const date = new Date(year, month, day);
-        const dateStr = formatDateISO(date);
+        const dateStr = formatDateISO(date); // ISO для внутреннего использования
+        
+        // ✅ Преобразуем дату в формат DD.MM.YYYY для сравнения с Make.com
+        const dayStr = day.toString().padStart(2, '0');
+        const monthStr = (month + 1).toString().padStart(2, '0');
+        const dateMakeFormat = `${dayStr}.${monthStr}.${year}`; // "28.01.2026"
+        
         const isPast = date < today;
-        const isAvailable = availableDatesSet.has(dateStr);
+        const isAvailable = availableDatesSet.has(dateMakeFormat); // ✅ Точное совпадение с Make.com!
         const isSelected = State.selectedDate === dateStr;
         
         let classes = ['calendar-day'];
@@ -257,7 +267,10 @@ function renderCalendar() {
         if (isSelected) classes.push('selected');
         
         calendarHTML += `
-            <div class="${classes.join(' ')}" ${isAvailable && !isPast ? `onclick="selectDate('${dateStr}')"` : ''}>
+            <div class="${classes.join(' ')}" 
+                 ${isAvailable && !isPast ? `onclick="selectDate('${dateStr}')"` : ''}
+                 data-date="${dateMakeFormat}" 
+                 title="${isAvailable ? '✅ ' + dateMakeFormat : ''}">
                 <span class="day-number">${day}</span>
                 ${isAvailable ? '<div class="slots-indicator"></div>' : ''}
             </div>
