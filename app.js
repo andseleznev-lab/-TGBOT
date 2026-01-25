@@ -477,15 +477,22 @@ async function loadAvailableSlots(serviceName, date) {
         const result = await BookingAPI.getAvailableSlots(serviceName, date);
         console.log('📥 RAW slots от Make:', result.slots);
         
-        // ✅ Make возвращает {array: [...], __IMTAGGLENGTH__: N}
-        // Берём массив из .array
+        // ✅ Make возвращает объекты через запятую (не массив!)
+        // Нужно собрать их в массив
         let slotsArray = [];
         
         if (Array.isArray(result.slots)) {
+            // Если уже массив
             slotsArray = result.slots;
-        } else if (result.slots && Array.isArray(result.slots.array)) {
-            slotsArray = result.slots.array;
+        } else if (result.slots && result.slots.array) {
+            // Если объект с .array
+            slotsArray = Array.isArray(result.slots.array) ? result.slots.array : [result.slots.array];
+        } else if (result.slots && typeof result.slots === 'object') {
+            // Если объект — преобразуем в массив значений
+            slotsArray = Object.values(result.slots);
         }
+        
+        console.log('🔄 Slots как массив:', slotsArray);
         
         // Преобразуем {"0":"id", "1":"date", "2":"time"} → {id, date, time}
         const allSlots = slotsArray
