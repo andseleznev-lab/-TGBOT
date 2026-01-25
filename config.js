@@ -4,7 +4,7 @@ const CONFIG = {
     // URL вебхука Make.com
     // ⚠️ ВАЖНО: После создания сценария в Make замените YOUR_WEBHOOK_URL_HERE на реальный URL
     API: {
-        main: 'https://hook.eu2.make.com/YOUR_WEBHOOK_URL_HERE'
+        main: 'https://hook.eu2.make.com/r61db3c6xvtw765yx3hy8629561k23ba'
     },
     
     // Иконки для услуг (emoji)
