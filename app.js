@@ -359,10 +359,14 @@ async function selectDate(dateStr) {
     State.selectedDate = dateStr;
     State.selectedSlot = null;
     
+    // ✅ Первый рендер: показываем выбранную дату
+    renderBookingScreen();
+    
     showLoader();
     await loadAvailableSlots(State.selectedService, dateStr);
     hideLoader();
     
+    // ✅ Второй рендер: показываем слоты
     renderBookingScreen();
 }
 
@@ -375,6 +379,12 @@ function changeMonth(direction) {
     const newMonth = new Date(State.currentMonth);
     newMonth.setMonth(newMonth.getMonth() + direction);
     State.currentMonth = newMonth;
+    
+    // ✅ Очищаем выбранную дату и слоты при смене месяца
+    State.selectedDate = null;
+    State.selectedSlot = null;
+    State.availableSlots = [];
+    
     renderBookingScreen();
 }
 
