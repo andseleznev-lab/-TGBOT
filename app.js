@@ -443,13 +443,18 @@ async function performBooking(dateFormatted) {
         console.log('📥 Результат бронирования:', result);
         
         if (result.booking && result.booking.zoom_link) {
-            // Бот отправит сообщение - не показываем alert
-            // Просто сбрасываем состояние и возвращаемся к услугам
+            // Бот отправит сообщение - закрываем Mini App
             State.selectedService = null;
             State.selectedDate = null;
             State.selectedSlot = null;
             State.availableSlots = [];
-            switchTab('services');
+            
+            // Закрываем Mini App чтобы пользователь увидел сообщение от бота
+            setTimeout(() => {
+                if (tg.close) {
+                    tg.close();
+                }
+            }, 500);
         } else {
             alert('Запись создана, проверьте сообщения от бота');
             switchTab('services');
