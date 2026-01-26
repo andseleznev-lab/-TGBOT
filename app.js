@@ -443,18 +443,16 @@ async function performBooking(dateFormatted) {
         console.log('📥 Результат бронирования:', result);
         
         if (result.booking && result.booking.zoom_link) {
-            const message = '✅ Запись подтверждена!\n\nСсылка на Zoom:\n' + result.booking.zoom_link;
-            
-            alert(message);
-            
-            // Сбрасываем состояние
+            // Бот отправит сообщение - не показываем alert
+            // Просто сбрасываем состояние и возвращаемся к услугам
             State.selectedService = null;
             State.selectedDate = null;
             State.selectedSlot = null;
             State.availableSlots = [];
             switchTab('services');
         } else {
-            alert('Запись создана, но ссылка Zoom не получена');
+            alert('Запись создана, проверьте сообщения от бота');
+            switchTab('services');
         }
     } catch (error) {
         hideLoader();
