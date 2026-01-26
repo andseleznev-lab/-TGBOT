@@ -1,3 +1,48 @@
+// ===== СТАТИЧНЫЕ ДАННЫЕ =====
+const STATIC_SERVICES = [
+    {
+        id: "diagnosis",
+        name: "Диагностика",
+        description: "Бесплатная диагностическая консультация",
+        price: 0,
+        duration: "30 минут",
+        days: ["Среда", "Пятница"]
+    },
+    {
+        id: "club_info",
+        name: "Вступить в клуб",
+        description: "Информация о клубе",
+        price: null,
+        duration: null,
+        days: null,
+        type: "info_button"
+    },
+    {
+        id: "package",
+        name: "Пакет консультаций",
+        description: "10 сессий",
+        price: 75000,
+        duration: "10 сессий по 1 часу",
+        days: ["Вторник", "Четверг"]
+    },
+    {
+        id: "family",
+        name: "Семейная консультация",
+        description: "Консультация для пары или семьи",
+        price: 10000,
+        duration: "2 часа",
+        days: ["Вторник", "Четверг"]
+    },
+    {
+        id: "single",
+        name: "Индивидуальная консультация",
+        description: "Персональная консультация",
+        price: 8000,
+        duration: "1 час",
+        days: ["Вторник", "Четверг"]
+    }
+];
+
 // ===== ГЛОБАЛЬНОЕ СОСТОЯНИЕ ПРИЛОЖЕНИЯ =====
 const State = {
     currentTab: 'services',
@@ -10,7 +55,8 @@ const State = {
     currentMonth: new Date(),
     isLoading: false,
     userBookings: [],
-    currentRequest: null  // ← Добавлено для отмены запросов
+    currentRequest: null,  // Для отмены запросов
+    bookingsLoadTimeout: null  // Для debounce загрузки записей
 };
 
 // ===== API ФУНКЦИИ =====
@@ -579,15 +625,9 @@ function openPayment(type) {
 // ===== ЗАГРУЗКА ДАННЫХ =====
 
 async function loadServices() {
-    try {
-        showLoader();
-        const result = await BookingAPI.getServices();
-        State.services = result.services || [];
-        hideLoader();
-    } catch (error) {
-        hideLoader();
-        tg.showAlert('Не удалось загрузить список услуг');
-    }
+    // Используем статичные данные из CONFIG вместо запроса к Make
+    State.services = CONFIG.SERVICES;
+    console.log('✅ Загружены статичные услуги:', State.services);
 }
 
 async function loadAvailableDates(serviceName) {
@@ -659,6 +699,7 @@ async function loadAvailableSlots(serviceName, date) {
 // ===== УПРАВЛЕНИЕ БРОНИРОВАНИЯМИ =====
 
 async function loadUserBookings() {
+    showLoader();
     try {
         const result = await BookingAPI.getUserBookings();
         console.log('📥 Бронирования пользователя:', result);
@@ -671,15 +712,22 @@ async function loadUserBookings() {
                 time: booking["2"] || booking.start_time,
                 service: booking["5"] || booking.service,
                 zoom_link: booking["12"] || booking.zoom_link
-            }));
+            })).filter(b => b.id && b.date && b.time);  // Фильтруем пустые
         } else {
             State.userBookings = [];
         }
         
         console.log('✅ Обработанные бронирования:', State.userBookings);
+        hideLoader();
     } catch (error) {
         console.error('❌ Ошибка загрузки бронирований:', error);
         State.userBookings = [];
+        hideLoader();
+        
+        // Не показываем alert если запрос отменён
+        if (error.message !== 'Request cancelled') {
+            alert('Не удалось загрузить записи');
+        }
     }
 }
 
@@ -726,7 +774,24 @@ function switchTab(tabName) {
             renderBookingScreen();
             break;
         case 'mybookings':
-            loadUserBookings().then(() => renderMyBookingsScreen());
+            // ✅ Debounce: отменяем предыдущую загрузку если быстро переключили
+            if (State.bookingsLoadTimeout) {
+                clearTimeout(State.bookingsLoadTimeout);
+            }
+            
+            // Показываем loader сразу
+            document.getElementById('app').innerHTML = `
+                <h1 class="screen-title fade-in">Мои записи</h1>
+                <div class="loader-container">
+                    <div class="glass-loader"></div>
+                    <p>Загрузка...</p>
+                </div>
+            `;
+            
+            // Загружаем с небольшой задержкой
+            State.bookingsLoadTimeout = setTimeout(() => {
+                loadUserBookings().then(() => renderMyBookingsScreen());
+            }, 300);
             break;
     }
 }
