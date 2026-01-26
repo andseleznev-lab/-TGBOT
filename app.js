@@ -489,52 +489,37 @@ async function loadAvailableDates(serviceName) {
 async function loadAvailableSlots(serviceName, date) {
     try {
         const result = await BookingAPI.getAvailableSlots(serviceName, date);
+        console.log('📥 RAW slots от Make:', result.slots);
         
-        console.log('🔍 data:', JSON.stringify(result, null, 2));
-        console.log('📥 data.slots тип:', typeof result.slots);
-        console.log('📥 data.slots:', result.slots);
-        console.log('🔍 data.slots length:', result.slots?.length);
-        console.log('🔍 data.slots constructor:', result.slots?.constructor.name);
-        
-        // ✅ ПРОВЕРКА и ПАРСИНГ
-        let slots = [];
+        // ✅ Make возвращает {array: [...], __IMTAGGLENGTH__: N}
+        // Берём массив из .array
+        let slotsArray = [];
         
         if (Array.isArray(result.slots)) {
-            slots = result.slots.map(slot => ({
-                id: slot[0] || slot['0'],
-                date: slot[1] || slot['1'],
-                time: slot[2] || slot['2']
-            }));
-        } else if (typeof result.slots === 'string') {
-            // Если Make вернул строку — парсим
-            slots = JSON.parse(result.slots).map(slot => ({
-                id: slot[0],
-                date: slot[1],
-                time: slot[2]
-            }));
-        } else {
-            // Make формат: распарсим объект
-            slots = Object.values(result.slots).map(slot => ({
-                id: slot[0],
-                date: slot[1],
-                time: slot[2]
-            }));
+            slotsArray = result.slots;
+        } else if (result.slots && Array.isArray(result.slots.array)) {
+            slotsArray = result.slots.array;
         }
         
-        console.log('✅ Парсинг результат:', slots);
-        console.log(`🎯 ${slots.length} слотов для ${date}`);
+        // Преобразуем {"0":"id", "1":"date", "2":"time"} → {id, date, time}
+        const allSlots = slotsArray
+            .map(slot => ({
+                id: slot["0"] || slot[0],
+                date: slot["1"] || slot[1],
+                time: slot["2"] || slot[2]
+            }))
+            .filter(s => s.time && s.date);
+        
+        console.log('✅ Обработанные слоты:', allSlots);
         
         // ✅ ФИЛЬТРУЕМ только слоты для выбранной даты
-        State.availableSlots = slots.filter(slot => slot.date === date);
+        State.availableSlots = allSlots.filter(slot => slot.date === date);
         
-        console.log(`🎯 После фильтра: ${State.availableSlots.length} слотов для ${date}:`, State.availableSlots);
+        console.log(`🎯 Слоты для даты ${date}:`, State.availableSlots);
     } catch (error) {
-        console.error('❌ Полная ошибка:', error);
+        console.error('❌ Ошибка загрузки слотов:', error);
         State.availableSlots = [];
-        // Убираем showAlert для старой версии Telegram
-        if (tg.showAlert) {
-            tg.showAlert('Не удалось загрузить свободные слоты');
-        } else if (tg.HapticFeedback) {
+        if (tg.HapticFeedback) {
             tg.HapticFeedback.notificationOccurred('error');
         }
     }
