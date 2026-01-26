@@ -410,9 +410,7 @@ function changeMonth(direction) {
 
 async function handleBookingConfirm() {
     if (!State.selectedService || !State.selectedDate || !State.selectedSlot) {
-        if (tg.showAlert) {
-            tg.showAlert('Пожалуйста, выберите услугу, дату и время');
-        }
+        alert('Пожалуйста, выберите услугу, дату и время');
         return;
     }
     
@@ -422,18 +420,12 @@ async function handleBookingConfirm() {
     
     const confirmMessage = `Подтвердить запись на ${dateMakeFormat} в ${State.selectedSlot}?`;
     
-    if (!tg.showConfirm) {
-        // Fallback для старых версий Telegram
-        if (confirm(confirmMessage)) {
-            await performBooking(dateMakeFormat);
-        }
+    // Используем обычный confirm для совместимости
+    if (!confirm(confirmMessage)) {
         return;
     }
     
-    tg.showConfirm(confirmMessage, async (confirmed) => {
-        if (!confirmed) return;
-        await performBooking(dateMakeFormat);
-    });
+    await performBooking(dateMakeFormat);
 }
 
 async function performBooking(dateFormatted) {
@@ -448,33 +440,26 @@ async function performBooking(dateFormatted) {
         
         hideLoader();
         
+        console.log('📥 Результат бронирования:', result);
+        
         if (result.booking && result.booking.zoom_link) {
-            const message = '✅ Запись подтверждена!\n\nСсылка на Zoom: ' + result.booking.zoom_link;
+            const message = '✅ Запись подтверждена!\n\nСсылка на Zoom:\n' + result.booking.zoom_link;
             
-            if (tg.showAlert) {
-                tg.showAlert(message, () => {
-                    // Сбрасываем состояние
-                    State.selectedService = null;
-                    State.selectedDate = null;
-                    State.selectedSlot = null;
-                    State.availableSlots = [];
-                    switchTab('services');
-                });
-            } else {
-                alert(message);
-                State.selectedService = null;
-                State.selectedDate = null;
-                State.selectedSlot = null;
-                State.availableSlots = [];
-                switchTab('services');
-            }
+            alert(message);
+            
+            // Сбрасываем состояние
+            State.selectedService = null;
+            State.selectedDate = null;
+            State.selectedSlot = null;
+            State.availableSlots = [];
+            switchTab('services');
+        } else {
+            alert('Запись создана, но ссылка Zoom не получена');
         }
     } catch (error) {
         hideLoader();
-        console.error('Ошибка бронирования:', error);
-        if (tg.showAlert) {
-            tg.showAlert('Ошибка при бронировании. Попробуйте еще раз.');
-        }
+        console.error('❌ Ошибка бронирования:', error);
+        alert('Ошибка при бронировании. Попробуйте еще раз.');
     }
 }
 
