@@ -8,7 +8,8 @@ const State = {
     availableSlots: [],
     selectedSlot: null,
     currentMonth: new Date(),
-    isLoading: false
+    isLoading: false,
+    userBookings: []
 };
 
 // ===== API ФУНКЦИИ =====
@@ -80,6 +81,14 @@ class BookingAPI {
             date: date,
             time: time
         });
+    }
+    
+    static async getUserBookings() {
+        return await this.request('get_user_bookings');
+    }
+    
+    static async cancelBooking(slotId) {
+        return await this.request('cancel_booking', { slot_id: slotId });
     }
 }
 
@@ -171,6 +180,57 @@ function renderPaymentScreen() {
                 Если у вас возникнут вопросы, свяжитесь с нами через бота.
             </p>
         </div>
+    `;
+    
+    document.getElementById('app').innerHTML = html;
+}
+
+// ===== ЭКРАН МОИ ЗАПИСИ =====
+
+function renderMyBookingsScreen() {
+    let bookingsHTML = '';
+    
+    if (State.userBookings.length === 0) {
+        bookingsHTML = `
+            <div class="glass-card fade-in" style="text-align: center; padding: 32px;">
+                <div style="font-size: 48px; margin-bottom: 16px;">📅</div>
+                <div style="color: var(--text-secondary);">У вас пока нет записей</div>
+            </div>
+        `;
+    } else {
+        bookingsHTML = State.userBookings.map(booking => `
+            <div class="glass-card fade-in" style="margin-bottom: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+                    <div>
+                        <div style="font-weight: 600; font-size: 16px; margin-bottom: 4px;">
+                            ${booking.date} в ${booking.time}
+                        </div>
+                        <div style="color: var(--text-secondary); font-size: 14px;">
+                            ${booking.service}
+                        </div>
+                    </div>
+                </div>
+                ${booking.zoom_link ? `
+                    <a href="${booking.zoom_link}" target="_blank" 
+                       style="display: block; padding: 12px; background: var(--button-color); 
+                              color: white; text-align: center; border-radius: 12px; 
+                              text-decoration: none; margin-bottom: 8px;">
+                        🔗 Открыть Zoom
+                    </a>
+                ` : ''}
+                <button onclick="cancelBooking('${booking.id}')" 
+                        style="width: 100%; padding: 12px; background: transparent; 
+                               border: 1px solid var(--error-color); color: var(--error-color); 
+                               border-radius: 12px; font-size: 15px; cursor: pointer;">
+                    Отменить запись
+                </button>
+            </div>
+        `).join('');
+    }
+    
+    const html = `
+        <h1 class="screen-title fade-in">Мои записи</h1>
+        ${bookingsHTML}
     `;
     
     document.getElementById('app').innerHTML = html;
@@ -555,6 +615,56 @@ async function loadAvailableSlots(serviceName, date) {
     }
 }
 
+// ===== УПРАВЛЕНИЕ БРОНИРОВАНИЯМИ =====
+
+async function loadUserBookings() {
+    try {
+        const result = await BookingAPI.getUserBookings();
+        console.log('📥 Бронирования пользователя:', result);
+        
+        if (result.bookings && result.bookings.array) {
+            // Обрабатываем массив бронирований
+            State.userBookings = result.bookings.array.map(booking => ({
+                id: booking["0"] || booking.id,
+                date: booking["1"] || booking.date,
+                time: booking["2"] || booking.start_time,
+                service: booking["5"] || booking.service,
+                zoom_link: booking["12"] || booking.zoom_link
+            }));
+        } else {
+            State.userBookings = [];
+        }
+        
+        console.log('✅ Обработанные бронирования:', State.userBookings);
+    } catch (error) {
+        console.error('❌ Ошибка загрузки бронирований:', error);
+        State.userBookings = [];
+    }
+}
+
+async function cancelBooking(slotId) {
+    if (!confirm('Вы уверены что хотите отменить запись?')) {
+        return;
+    }
+    
+    showLoader();
+    
+    try {
+        const result = await BookingAPI.cancelBooking(slotId);
+        hideLoader();
+        
+        if (result.success) {
+            alert('Запись отменена');
+            await loadUserBookings();
+            renderMyBookingsScreen();
+        }
+    } catch (error) {
+        hideLoader();
+        console.error('❌ Ошибка отмены:', error);
+        alert('Не удалось отменить запись');
+    }
+}
+
 // ===== НАВИГАЦИЯ МЕЖДУ ТАБАМИ =====
 
 function switchTab(tabName) {
@@ -573,6 +683,9 @@ function switchTab(tabName) {
             break;
         case 'booking':
             renderBookingScreen();
+            break;
+        case 'mybookings':
+            loadUserBookings().then(() => renderMyBookingsScreen());
             break;
     }
 }
