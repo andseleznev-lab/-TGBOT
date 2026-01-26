@@ -495,8 +495,15 @@ async function selectService(serviceName) {
     });
     
     showLoader();
-    await loadAvailableDates(serviceName);
-    hideLoader();
+    
+    try {
+        await loadAvailableDates(serviceName);
+    } catch (error) {
+        console.error('Ошибка в selectService:', error);
+    } finally {
+        // ✅ ВСЕГДА убираем loader
+        hideLoader();
+    }
     
     // ✅ Рендерим ПОСЛЕ загрузки дат
     renderBookingScreen();
@@ -510,8 +517,14 @@ async function handleServiceSelect(serviceName) {
     State.selectedSlot = null;
     
     showLoader();
-    await loadAvailableDates(serviceName);
-    hideLoader();
+    
+    try {
+        await loadAvailableDates(serviceName);
+    } catch (error) {
+        console.error('Ошибка в handleServiceSelect:', error);
+    } finally {
+        hideLoader();
+    }
     
     renderBookingScreen();
 }
@@ -530,8 +543,14 @@ async function selectDate(dateStr) {
     console.log(`🔄 Конвертация даты: ${dateStr} → ${dateMakeFormat}`);
     
     showLoader();
-    await loadAvailableSlots(State.selectedService, dateMakeFormat);
-    hideLoader();
+    
+    try {
+        await loadAvailableSlots(State.selectedService, dateMakeFormat);
+    } catch (error) {
+        console.error('Ошибка в selectDate:', error);
+    } finally {
+        hideLoader();
+    }
     
     // ✅ Второй рендер: показываем слоты
     renderBookingScreen();
@@ -653,7 +672,10 @@ async function loadAvailableDates(serviceName) {
     } catch (error) {
         console.error('❌ Ошибка загрузки дат:', error);
         State.availableDates = [];
-        tg.showAlert('Не удалось загрузить доступные даты');
+        // Не показываем alert если запрос был отменён
+        if (error.message !== 'Request cancelled') {
+            alert('Не удалось загрузить доступные даты');
+        }
     }
 }
 
