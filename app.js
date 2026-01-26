@@ -34,7 +34,18 @@ class BookingAPI {
                 throw new Error(`HTTP ${response.status}`);
             }
 
-            const result = await response.json();
+            // ✅ Читаем как ТЕКСТ чтобы увидеть сырой ответ
+            const text = await response.text();
+            console.log('🔍 RAW response:', text);
+            
+            let result;
+            try {
+                result = JSON.parse(text);
+            } catch (e) {
+                console.error('JSON parse error:', e);
+                console.error('Текст который не парсится:', text);
+                throw new Error('Invalid JSON from server');
+            }
             
             if (!result.success) {
                 throw new Error(result.error || 'Неизвестная ошибка');
@@ -43,7 +54,10 @@ class BookingAPI {
             return result;
         } catch (error) {
             console.error('API Error:', error);
-            tg.showAlert(`Ошибка: ${error.message}`);
+            // Убираем showAlert для старых версий Telegram
+            if (tg.showAlert) {
+                tg.showAlert(`Ошибка: ${error.message}`);
+            }
             throw error;
         }
     }
@@ -517,7 +531,12 @@ async function loadAvailableSlots(serviceName, date) {
     } catch (error) {
         console.error('❌ Полная ошибка:', error);
         State.availableSlots = [];
-        tg.showAlert('Не удалось загрузить свободные слоты');
+        // Убираем showAlert для старой версии Telegram
+        if (tg.showAlert) {
+            tg.showAlert('Не удалось загрузить свободные слоты');
+        } else if (tg.HapticFeedback) {
+            tg.HapticFeedback.notificationOccurred('error');
+        }
     }
 }
 
