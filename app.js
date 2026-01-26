@@ -9,13 +9,30 @@ const State = {
     selectedSlot: null,
     currentMonth: new Date(),
     isLoading: false,
-    userBookings: []
+    userBookings: [],
+    currentRequest: null  // ← Добавлено для отмены запросов
 };
 
 // ===== API ФУНКЦИИ =====
 class BookingAPI {
     static async request(action, data = {}) {
+        const startTime = Date.now();
+        console.log(`⏱️ [${action}] Начало запроса...`);
+        
+        // ✅ Отменяем предыдущий запрос если он ещё выполняется
+        if (State.currentRequest) {
+            console.log('⚠️ Отмена предыдущего запроса');
+            State.currentRequest.abort();
+        }
+        
         try {
+            const controller = new AbortController();
+            State.currentRequest = controller;  // Сохраняем для отмены
+            
+            const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 сек таймаут
+            
+            console.log(`📤 [${action}] Отправка запроса...`);
+            
             const response = await fetch(CONFIG.API.main, {
                 method: 'POST',
                 headers: {
@@ -28,22 +45,28 @@ class BookingAPI {
                     init_data: tg.initData,
                     request_id: generateRequestId(),
                     ...data
-                })
+                }),
+                signal: controller.signal
             });
+            
+            clearTimeout(timeoutId);
+            State.currentRequest = null;  // Очищаем после завершения
+            
+            console.log(`📥 [${action}] Ответ получен: ${response.status}`);
 
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}`);
             }
 
-            // ✅ Читаем как ТЕКСТ чтобы увидеть сырой ответ
+            console.log(`📄 [${action}] Чтение текста...`);
             const text = await response.text();
-            console.log('🔍 RAW response:', text);
+            console.log(`🔍 [${action}] RAW response:`, text.substring(0, 200) + '...');
             
             let result;
             try {
                 result = JSON.parse(text);
             } catch (e) {
-                console.error('JSON parse error:', e);
+                console.error(`❌ [${action}] JSON parse error:`, e);
                 console.error('Текст который не парсится:', text);
                 throw new Error('Invalid JSON from server');
             }
@@ -52,14 +75,22 @@ class BookingAPI {
                 throw new Error(result.error || 'Неизвестная ошибка');
             }
 
+            const duration = Date.now() - startTime;
+            console.log(`✅ [${action}] Успешно за ${duration}ms`);
+            
             return result;
         } catch (error) {
-            console.error('API Error:', error);
-            // Убираем showAlert для старых версий Telegram
-            if (tg.showAlert) {
-                tg.showAlert(`Ошибка: ${error.message}`);
+            const duration = Date.now() - startTime;
+            State.currentRequest = null;  // Очищаем при ошибке
+            
+            if (error.name === 'AbortError') {
+                console.error(`⏱️ [${action}] ОТМЕНЁН или ТАЙМАУТ после ${duration}ms`);
+                // Не показываем alert при отмене — это нормально
+                throw new Error('Request cancelled');
+            } else {
+                console.error(`❌ [${action}] Ошибка после ${duration}ms:`, error);
+                throw error;
             }
-            throw error;
         }
     }
 
