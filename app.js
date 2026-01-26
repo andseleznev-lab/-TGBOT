@@ -410,36 +410,72 @@ function changeMonth(direction) {
 
 async function handleBookingConfirm() {
     if (!State.selectedService || !State.selectedDate || !State.selectedSlot) {
-        tg.showAlert('Пожалуйста, выберите услугу, дату и время');
+        if (tg.showAlert) {
+            tg.showAlert('Пожалуйста, выберите услугу, дату и время');
+        }
         return;
     }
     
-    tg.showConfirm('Подтвердить запись на ' + State.selectedDate + ' в ' + State.selectedSlot + '?', async (confirmed) => {
+    // ✅ Конвертируем дату ISO → DD.MM.YYYY
+    const [year, month, day] = State.selectedDate.split('-');
+    const dateMakeFormat = `${day}.${month}.${year}`;
+    
+    const confirmMessage = `Подтвердить запись на ${dateMakeFormat} в ${State.selectedSlot}?`;
+    
+    if (!tg.showConfirm) {
+        // Fallback для старых версий Telegram
+        if (confirm(confirmMessage)) {
+            await performBooking(dateMakeFormat);
+        }
+        return;
+    }
+    
+    tg.showConfirm(confirmMessage, async (confirmed) => {
         if (!confirmed) return;
+        await performBooking(dateMakeFormat);
+    });
+}
+
+async function performBooking(dateFormatted) {
+    showLoader();
+    
+    try {
+        const result = await BookingAPI.bookSlot(
+            State.selectedService,
+            dateFormatted,
+            State.selectedSlot
+        );
         
-        showLoader();
+        hideLoader();
         
-        try {
-            const result = await BookingAPI.bookSlot(
-                State.selectedService,
-                State.selectedDate,
-                State.selectedSlot
-            );
+        if (result.booking && result.booking.zoom_link) {
+            const message = '✅ Запись подтверждена!\n\nСсылка на Zoom: ' + result.booking.zoom_link;
             
-            hideLoader();
-            
-            if (result.zoom_link) {
-                tg.showAlert('✅ Запись подтверждена! Ссылка на Zoom отправлена в чат.', () => {
+            if (tg.showAlert) {
+                tg.showAlert(message, () => {
+                    // Сбрасываем состояние
                     State.selectedService = null;
                     State.selectedDate = null;
                     State.selectedSlot = null;
-                    renderBookingScreen();
+                    State.availableSlots = [];
+                    switchTab('services');
                 });
+            } else {
+                alert(message);
+                State.selectedService = null;
+                State.selectedDate = null;
+                State.selectedSlot = null;
+                State.availableSlots = [];
+                switchTab('services');
             }
-        } catch (error) {
-            hideLoader();
         }
-    });
+    } catch (error) {
+        hideLoader();
+        console.error('Ошибка бронирования:', error);
+        if (tg.showAlert) {
+            tg.showAlert('Ошибка при бронировании. Попробуйте еще раз.');
+        }
+    }
 }
 
 function openPayment(type) {
