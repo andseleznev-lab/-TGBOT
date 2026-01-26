@@ -475,28 +475,47 @@ async function loadAvailableDates(serviceName) {
 async function loadAvailableSlots(serviceName, date) {
     try {
         const result = await BookingAPI.getAvailableSlots(serviceName, date);
-        console.log('📥 RAW слоты от Make:', result.slots);
         
-        // ✅ Make возвращает массив объектов с числовыми индексами
-        const slotsArray = Array.isArray(result.slots) ? result.slots : [];
+        console.log('🔍 data:', JSON.stringify(result, null, 2));
+        console.log('📥 data.slots тип:', typeof result.slots);
+        console.log('📥 data.slots:', result.slots);
+        console.log('🔍 data.slots length:', result.slots?.length);
+        console.log('🔍 data.slots constructor:', result.slots?.constructor.name);
         
-        console.log('🔄 Slots как массив:', slotsArray);
+        // ✅ ПРОВЕРКА и ПАРСИНГ
+        let slots = [];
         
-        // ✅ ПАРСИМ напрямую через числовые индексы
-        const allSlots = slotsArray.map(slot => ({
-            id: slot[0],      // "dslot_454"
-            date: slot[1],    // "28.01.2026"
-            time: slot[2]     // "10:00"
-        })).filter(s => s.time && s.date);
+        if (Array.isArray(result.slots)) {
+            slots = result.slots.map(slot => ({
+                id: slot[0] || slot['0'],
+                date: slot[1] || slot['1'],
+                time: slot[2] || slot['2']
+            }));
+        } else if (typeof result.slots === 'string') {
+            // Если Make вернул строку — парсим
+            slots = JSON.parse(result.slots).map(slot => ({
+                id: slot[0],
+                date: slot[1],
+                time: slot[2]
+            }));
+        } else {
+            // Make формат: распарсим объект
+            slots = Object.values(result.slots).map(slot => ({
+                id: slot[0],
+                date: slot[1],
+                time: slot[2]
+            }));
+        }
         
-        console.log('✅ Все слоты:', allSlots);
+        console.log('✅ Парсинг результат:', slots);
+        console.log(`🎯 ${slots.length} слотов для ${date}`);
         
         // ✅ ФИЛЬТРУЕМ только слоты для выбранной даты
-        State.availableSlots = allSlots.filter(slot => slot.date === date);
+        State.availableSlots = slots.filter(slot => slot.date === date);
         
-        console.log(`🎯 ${State.availableSlots.length} слотов для ${date}:`, State.availableSlots);
+        console.log(`🎯 После фильтра: ${State.availableSlots.length} слотов для ${date}:`, State.availableSlots);
     } catch (error) {
-        console.error('❌ Ошибка загрузки слотов:', error);
+        console.error('❌ Полная ошибка:', error);
         State.availableSlots = [];
         tg.showAlert('Не удалось загрузить свободные слоты');
     }
