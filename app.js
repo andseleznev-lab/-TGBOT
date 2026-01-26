@@ -199,29 +199,39 @@ function renderMyBookingsScreen() {
         `;
     } else {
         bookingsHTML = State.userBookings.map(booking => `
-            <div class="glass-card fade-in" style="margin-bottom: 16px;">
-                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
-                    <div>
-                        <div style="font-weight: 600; font-size: 16px; margin-bottom: 4px;">
-                            ${booking.date} в ${booking.time}
-                        </div>
-                        <div style="color: var(--text-secondary); font-size: 14px;">
-                            ${booking.service}
-                        </div>
+            <div class="glass-card fade-in" style="margin-bottom: 16px; padding: 20px;">
+                <div style="margin-bottom: 16px;">
+                    <div style="font-weight: 600; font-size: 17px; margin-bottom: 6px; color: var(--text-primary);">
+                        ${booking.date} в ${booking.time}
+                    </div>
+                    <div style="color: var(--text-secondary); font-size: 15px;">
+                        ${booking.service}
                     </div>
                 </div>
                 ${booking.zoom_link ? `
                     <a href="${booking.zoom_link}" target="_blank" 
-                       style="display: block; padding: 12px; background: var(--button-color); 
-                              color: white; text-align: center; border-radius: 12px; 
-                              text-decoration: none; margin-bottom: 8px;">
+                       style="display: block; padding: 14px; 
+                              background: var(--accent-gradient); 
+                              color: var(--text-white); 
+                              text-align: center; 
+                              border-radius: 12px; 
+                              text-decoration: none; 
+                              margin-bottom: 10px;
+                              font-weight: 500;
+                              font-size: 15px;">
                         🔗 Открыть Zoom
                     </a>
                 ` : ''}
                 <button onclick="cancelBooking('${booking.id}')" 
-                        style="width: 100%; padding: 12px; background: transparent; 
-                               border: 1px solid var(--error-color); color: var(--error-color); 
-                               border-radius: 12px; font-size: 15px; cursor: pointer;">
+                        style="width: 100%; 
+                               padding: 14px; 
+                               background: transparent; 
+                               border: 1.5px solid var(--error); 
+                               color: var(--error); 
+                               border-radius: 12px; 
+                               font-size: 15px; 
+                               font-weight: 500;
+                               cursor: pointer;">
                     Отменить запись
                 </button>
             </div>
