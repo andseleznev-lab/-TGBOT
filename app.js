@@ -376,8 +376,14 @@ async function selectDate(dateStr) {
     // ✅ Первый рендер: показываем выбранную дату
     renderBookingScreen();
     
+    // ✅ Конвертируем ISO "2026-01-28" → DD.MM.YYYY "28.01.2026"
+    const [year, month, day] = dateStr.split('-');
+    const dateMakeFormat = `${day}.${month}.${year}`;
+    
+    console.log(`🔄 Конвертация даты: ${dateStr} → ${dateMakeFormat}`);
+    
     showLoader();
-    await loadAvailableSlots(State.selectedService, dateStr);
+    await loadAvailableSlots(State.selectedService, dateMakeFormat);
     hideLoader();
     
     // ✅ Второй рендер: показываем слоты
