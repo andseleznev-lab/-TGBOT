@@ -7,7 +7,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <title>Запись на консультацию</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=3">
 </head>
 <body>
     <!-- Основной контейнер приложения -->
@@ -54,7 +54,56 @@
         </button>
     </nav>
 
-    <script src="config.js"></script>
-    <script src="app.js?v=2"></script>
+    <!-- 🔧 ERUDA DevTools для мобильной отладки -->
+    <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+    <script>
+        // Инициализация Eruda
+        // По умолчанию включен для всех - после тестирования можно удалить эти строки
+        eruda.init();
+        
+        // 📝 ОПЦИОНАЛЬНЫЕ НАСТРОЙКИ (раскомментируйте если нужно):
+        
+        // Вариант 1: Показывать только если в URL есть ?debug=1
+        // Использование: откройте Mini App и в браузере добавьте ?debug=1 в конец URL
+        /*
+        if (window.location.search.includes('debug=1')) {
+            eruda.init();
+        }
+        */
+        
+        // Вариант 2: Показывать только для определённых Telegram ID
+        // Замените YOUR_TELEGRAM_ID на ваш реальный ID из Telegram
+        /*
+        const DEBUG_USERS = [YOUR_TELEGRAM_ID, 123456789]; // Ваши тестовые ID
+        
+        // Ждём инициализации Telegram WebApp
+        if (window.Telegram && window.Telegram.WebApp) {
+            window.Telegram.WebApp.ready();
+            const userId = window.Telegram.WebApp.initDataUnsafe?.user?.id;
+            
+            if (DEBUG_USERS.includes(userId)) {
+                eruda.init();
+                console.log('🔧 Eruda DevTools enabled for user:', userId);
+            }
+        }
+        */
+        
+        console.log('🔧 Eruda DevTools initialized');
+        console.log('📱 Откройте панель: нажмите на круглую кнопку в правом нижнем углу');
+    </script>
+
+    <!-- Основные скрипты приложения -->
+    <script src="config.js?v=3"></script>
+    <script src="app.js?v=3"></script>
+    
+    <!-- 📝 Логирование для проверки загрузки -->
+    <script>
+        console.log('✅ index.html loaded - version 3.0');
+        console.log('📦 Files loaded:', {
+            telegram: !!window.Telegram,
+            config: !!window.CONFIG,
+            app: !!window.initApp
+        });
+    </script>
 </body>
 </html>
