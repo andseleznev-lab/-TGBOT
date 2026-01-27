@@ -56,8 +56,29 @@ const State = {
     isLoading: false,
     userBookings: [],
     currentRequest: null,  // Для отмены запросов
-    bookingsLoadTimeout: null  // Для debounce загрузки записей
+    bookingsLoadTimeout: null,  // Для debounce загрузки записей
+    isAppActive: true  // 🔧 ИСПРАВЛЕНИЕ 1: Флаг активности приложения
 };
+
+// 🔧 ИСПРАВЛЕНИЕ 2: Обработка visibility change для корректной работы при выходе/входе
+document.addEventListener('visibilitychange', () => {
+    State.isAppActive = !document.hidden;
+    
+    if (State.isAppActive) {
+        console.log('✅ Приложение стало активным');
+        // При возвращении в приложение - рефреш текущего таба
+        if (State.currentTab === 'mybookings') {
+            switchTab('mybookings');
+        }
+    } else {
+        console.log('⏸️ Приложение ушло в фон - отменяем активные запросы');
+        // Отменяем все активные запросы при уходе в фон
+        if (State.currentRequest) {
+            State.currentRequest.abort();
+            State.currentRequest = null;
+        }
+    }
+});
 
 // ===== API ФУНКЦИИ =====
 class BookingAPI {
@@ -65,10 +86,17 @@ class BookingAPI {
         const startTime = Date.now();
         console.log(`⏱️ [${action}] Начало запроса...`);
         
+        // 🔧 ИСПРАВЛЕНИЕ 3: Не выполняем запросы если приложение неактивно
+        if (!State.isAppActive) {
+            console.log(`⏸️ [${action}] Приложение неактивно - запрос отменён`);
+            throw new Error('App is inactive');
+        }
+        
         // ✅ Отменяем предыдущий запрос если он ещё выполняется
         if (State.currentRequest) {
             console.log('⚠️ Отмена предыдущего запроса');
             State.currentRequest.abort();
+            State.currentRequest = null;  // 🔧 ИСПРАВЛЕНИЕ 4: Сразу очищаем
         }
         
         try {
@@ -130,9 +158,11 @@ class BookingAPI {
             State.currentRequest = null;  // Очищаем при ошибке
             
             if (error.name === 'AbortError') {
-                console.error(`⏱️ [${action}] ОТМЕНЁН или ТАЙМАУТ после ${duration}ms`);
-                // Не показываем alert при отмене — это нормально
-                throw new Error('Request cancelled');
+                console.log(`⏱️ [${action}] ОТМЕНЁН или ТАЙМАУТ после ${duration}ms`);
+                // 🔧 ИСПРАВЛЕНИЕ 5: Выбрасываем специальную ошибку для отмены
+                const cancelError = new Error('Request cancelled');
+                cancelError.isCancelled = true;
+                throw cancelError;
             } else {
                 console.error(`❌ [${action}] Ошибка после ${duration}ms:`, error);
                 throw error;
@@ -195,7 +225,7 @@ function renderServicesScreen() {
                         <div class="service-icon">${CONFIG.SERVICE_ICONS[service.name] || '📋'}</div>
                         <div class="service-info">
                             <div class="service-name">${escapeHtml(service.name)}</div>
-                            <div class="service-duration">${service.duration} минут</div>
+                            <div class="service-duration">${service.duration}</div>
                         </div>
                     </div>
                     <div class="service-description">
@@ -241,83 +271,14 @@ function renderPaymentScreen() {
             </div>
             
             <div class="payment-card glass-card" onclick="openPayment('other')">
-                <div class="payment-icon">📱</div>
+                <div class="payment-icon">💰</div>
                 <div class="payment-info">
                     <div class="payment-name">Другие способы</div>
-                    <div class="payment-description">ЮMoney, QIWI и другие</div>
+                    <div class="payment-description">Альтернативные методы</div>
                 </div>
                 <div class="payment-arrow">→</div>
             </div>
         </div>
-        
-        <div class="section-title" style="margin-top: 32px;">💡 Информация</div>
-        <div class="glass-card" style="padding: 20px; margin-top: 16px;">
-            <p style="color: var(--text-secondary); line-height: 1.6; font-size: 15px;">
-                После оплаты вы получите подтверждение и ссылку на Zoom встречу. 
-                Если у вас возникнут вопросы, свяжитесь с нами через бота.
-            </p>
-        </div>
-    `;
-    
-    document.getElementById('app').innerHTML = html;
-}
-
-// ===== ЭКРАН МОИ ЗАПИСИ =====
-
-function renderMyBookingsScreen() {
-    let bookingsHTML = '';
-    
-    if (State.userBookings.length === 0) {
-        bookingsHTML = `
-            <div class="glass-card fade-in" style="text-align: center; padding: 32px;">
-                <div style="font-size: 48px; margin-bottom: 16px;">📅</div>
-                <div style="color: var(--text-secondary);">У вас пока нет записей</div>
-            </div>
-        `;
-    } else {
-        bookingsHTML = State.userBookings.map(booking => `
-            <div class="glass-card fade-in" style="margin-bottom: 16px; padding: 20px;">
-                <div style="margin-bottom: 16px;">
-                    <div style="font-weight: 600; font-size: 17px; margin-bottom: 6px; color: var(--text-primary);">
-                        ${booking.date} в ${booking.time}
-                    </div>
-                    <div style="color: var(--text-secondary); font-size: 15px;">
-                        ${booking.service}
-                    </div>
-                </div>
-                ${booking.zoom_link ? `
-                    <a href="${booking.zoom_link}" target="_blank" 
-                       style="display: block; padding: 14px; 
-                              background: var(--accent-gradient); 
-                              color: var(--text-white); 
-                              text-align: center; 
-                              border-radius: 12px; 
-                              text-decoration: none; 
-                              margin-bottom: 10px;
-                              font-weight: 500;
-                              font-size: 15px;">
-                        🔗 Открыть Zoom
-                    </a>
-                ` : ''}
-                <button onclick="cancelBooking('${booking.id}')" 
-                        style="width: 100%; 
-                               padding: 14px; 
-                               background: transparent; 
-                               border: 1.5px solid var(--error); 
-                               color: var(--error); 
-                               border-radius: 12px; 
-                               font-size: 15px; 
-                               font-weight: 500;
-                               cursor: pointer;">
-                    Отменить запись
-                </button>
-            </div>
-        `).join('');
-    }
-    
-    const html = `
-        <h1 class="screen-title fade-in">Мои записи</h1>
-        ${bookingsHTML}
     `;
     
     document.getElementById('app').innerHTML = html;
@@ -325,315 +286,318 @@ function renderMyBookingsScreen() {
 
 // Экран бронирования
 function renderBookingScreen() {
+    const services = State.services.filter(s => !s.type || s.type !== 'info_button');
+    
     const html = `
         <h1 class="screen-title fade-in">Запись на консультацию</h1>
         
-        <div class="glass-card service-selector fade-in">
-            <select class="service-select" onchange="handleServiceSelect(this.value)">
-                <option value="">Выберите услугу...</option>
-                ${State.services.map(s => `
-                    <option value="${escapeHtml(s.name)}" ${State.selectedService === s.name ? 'selected' : ''}>
-                        ${escapeHtml(s.name)} (${s.price === 0 ? 'Бесплатно' : formatPrice(s.price)})
-                    </option>
-                `).join('')}
-            </select>
+        <div class="booking-container fade-in">
+            <div class="service-selector glass-card">
+                <select class="service-select" onchange="onServiceSelect(this.value)">
+                    <option value="">Выберите услугу</option>
+                    ${services.map(s => `
+                        <option value="${escapeHtml(s.name)}" ${State.selectedService === s.name ? 'selected' : ''}>
+                            ${escapeHtml(s.name)}
+                        </option>
+                    `).join('')}
+                </select>
+            </div>
+            
+            ${State.selectedService ? `
+                <div class="calendar-container glass-card">
+                    <div class="calendar-header">
+                        <div class="calendar-month">${getMonthName(State.currentMonth)}</div>
+                        <div class="calendar-nav">
+                            <button class="calendar-nav-btn" onclick="previousMonth()">‹</button>
+                            <button class="calendar-nav-btn" onclick="nextMonth()">›</button>
+                        </div>
+                    </div>
+                    <div class="weekdays">
+                        ${['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map(d => 
+                            `<div class="weekday">${d}</div>`
+                        ).join('')}
+                    </div>
+                    <div class="calendar-grid">
+                        ${renderCalendarDays()}
+                    </div>
+                </div>
+            ` : ''}
+            
+            ${State.selectedDate ? `
+                <div class="slots-container glass-card">
+                    <div class="slots-date">Доступное время на ${State.selectedDate}</div>
+                    ${State.availableSlots.length > 0 ? `
+                        <div class="slots-grid">
+                            ${State.availableSlots.map(slot => `
+                                <button 
+                                    class="slot-btn ${State.selectedSlot === slot.time ? 'selected' : ''}"
+                                    onclick="selectSlot('${slot.time}')">
+                                    ${slot.time}
+                                </button>
+                            `).join('')}
+                        </div>
+                    ` : `
+                        <div class="slots-empty">
+                            На эту дату нет доступных слотов
+                        </div>
+                    `}
+                </div>
+            ` : ''}
+            
+            ${State.selectedSlot ? `
+                <button class="confirm-button glass-card" onclick="confirmBooking()">
+                    Подтвердить запись
+                </button>
+            ` : ''}
         </div>
-        
-        <div id="calendar-section" class="${State.selectedService ? '' : 'hidden'}">
-            ${renderCalendar()}
-        </div>
-        
-        <div id="slots-section" class="${State.selectedDate ? '' : 'hidden'}">
-            ${renderSlots()}
-        </div>
-        
-        ${State.selectedSlot ? `
-            <button class="confirm-button" onclick="handleBookingConfirm()">
-                Подтвердить запись
-            </button>
-        ` : ''}
     `;
     
     document.getElementById('app').innerHTML = html;
 }
 
-// Рендер календаря
-// Рендер календаря с форматом DD.MM.YYYY для Make.com
-function renderCalendar() {
-    if (!State.selectedService) return '';
+// Экран "Мои записи"
+function renderMyBookingsScreen() {
+    const bookings = State.userBookings;
     
-    const monthDate = State.currentMonth;
-    const year = monthDate.getFullYear();
-    const month = monthDate.getMonth();
+    const html = `
+        <h1 class="screen-title fade-in">Мои записи</h1>
+        ${bookings.length > 0 ? `
+            <div class="services-grid fade-in">
+                ${bookings.map(booking => `
+                    <div class="service-card glass-card">
+                        <div class="service-header">
+                            <div class="service-icon">📅</div>
+                            <div class="service-info">
+                                <div class="service-name">${escapeHtml(booking.service)}</div>
+                                <div class="service-duration">${booking.date} в ${booking.time}</div>
+                            </div>
+                        </div>
+                        ${booking.zoom_link ? `
+                            <div class="service-description">
+                                <a href="${booking.zoom_link}" class="zoom-link" target="_blank">
+                                    Ссылка на Zoom
+                                </a>
+                            </div>
+                        ` : ''}
+                        <div class="service-footer">
+                            <button class="service-btn" onclick="cancelBooking('${booking.id}')">
+                                Отменить запись
+                            </button>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        ` : `
+            <div class="loader-container">
+                <p>У вас пока нет записей</p>
+            </div>
+        `}
+    `;
     
-    const monthName = monthDate.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' });
-    const firstDay = new Date(year, month, 1).getDay();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    document.getElementById('app').innerHTML = html;
+}
+
+// ===== КАЛЕНДАРЬ =====
+
+function renderCalendarDays() {
+    const year = State.currentMonth.getFullYear();
+    const month = State.currentMonth.getMonth();
+    
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    
+    let startDay = firstDay.getDay();
+    startDay = startDay === 0 ? 6 : startDay - 1;
     
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    // ✅ Преобразуем даты из Make.com формата (DD.MM.YYYY) в Set для быстрого поиска
-    const availableDatesSet = new Set(
-        State.availableDates
-            .filter(d => d.slots_count > 0)
-            .map(d => d.date) // Даты уже в формате "28.01.2026"
-    );
+    const availableDatesSet = new Set(State.availableDates.map(d => d.date));
     
-    console.log('🎯 Доступные даты для календаря:', Array.from(availableDatesSet));
+    let html = '';
     
-    let calendarHTML = `
-        <div class="glass-card calendar-container fade-in" style="margin-top: 16px;">
-            <div class="calendar-header">
-                <div class="calendar-month">${monthName}</div>
-                <div class="calendar-nav">
-                    <button class="calendar-nav-btn" onclick="changeMonth(-1)" ${month === today.getMonth() && year === today.getFullYear() ? 'disabled' : ''}>
-                        ←
-                    </button>
-                    <button class="calendar-nav-btn" onclick="changeMonth(1)">
-                        →
-                    </button>
-                </div>
-            </div>
-            
-            <div class="weekdays">
-                ${['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map(d => `<div class="weekday">${d}</div>`).join('')}
-            </div>
-            
-            <div class="calendar-grid">
-    `;
-    
-    const startDay = firstDay === 0 ? 6 : firstDay - 1;
     for (let i = 0; i < startDay; i++) {
-        calendarHTML += '<div class="calendar-day empty"></div>';
+        html += '<div class="calendar-day empty"></div>';
     }
     
     for (let day = 1; day <= daysInMonth; day++) {
         const date = new Date(year, month, day);
-        const dateStr = formatDateISO(date); // ISO для внутреннего использования
-        
-        // ✅ Преобразуем дату в формат DD.MM.YYYY для сравнения с Make.com
-        const dayStr = day.toString().padStart(2, '0');
-        const monthStr = (month + 1).toString().padStart(2, '0');
-        const dateMakeFormat = `${dayStr}.${monthStr}.${year}`; // "28.01.2026"
+        const dateStr = formatDateDMY(date);
         
         const isPast = date < today;
-        const isAvailable = availableDatesSet.has(dateMakeFormat); // ✅ Точное совпадение с Make.com!
+        const isAvailable = availableDatesSet.has(dateStr);
         const isSelected = State.selectedDate === dateStr;
         
-        let classes = ['calendar-day'];
-        if (isPast) classes.push('past');
-        else if (isAvailable) classes.push('available');
-        else classes.push('disabled');
-        if (isSelected) classes.push('selected');
+        let classes = 'calendar-day';
+        if (isPast) classes += ' past';
+        else if (isAvailable) classes += ' available';
+        else classes += ' disabled';
+        if (isSelected) classes += ' selected';
         
-        calendarHTML += `
-            <div class="${classes.join(' ')}" 
-                 ${isAvailable && !isPast ? `onclick="selectDate('${dateStr}')"` : ''}
-                 data-date="${dateMakeFormat}" 
-                 title="${isAvailable ? '✅ ' + dateMakeFormat : ''}">
+        const onclick = (!isPast && isAvailable) ? `onclick="selectDate('${dateStr}')"` : '';
+        
+        html += `
+            <div class="${classes}" ${onclick}>
                 <span class="day-number">${day}</span>
-                ${isAvailable ? '<div class="slots-indicator"></div>' : ''}
+                ${isAvailable && !isSelected ? '<span class="slots-indicator"></span>' : ''}
             </div>
         `;
     }
     
-    calendarHTML += '</div></div>';
-    
-    return calendarHTML;
+    return html;
 }
 
-// Рендер слотов времени
-function renderSlots() {
-    if (!State.selectedDate) return '';
-    
-    const dateObj = new Date(State.selectedDate + 'T00:00:00');
-    const dateFormatted = dateObj.toLocaleDateString('ru-RU', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long'
-    });
-    
-    const validSlots = State.availableSlots.filter(slot => slot && slot.time);
-    
-    if (validSlots.length === 0) {
-        return `
-            <div class="glass-card slots-container fade-in" style="margin-top: 16px;">
-                <div class="slots-date">${dateFormatted}</div>
-                <div class="slots-empty">
-                    На эту дату нет свободных слотов
-                </div>
-            </div>
-        `;
-    }
-    
-    return `
-        <div class="glass-card slots-container fade-in" style="margin-top: 16px;">
-            <div class="slots-date">${dateFormatted}</div>
-            <div class="slots-grid">
-                ${validSlots.map(slot => `
-                    <button 
-                        class="slot-btn ${State.selectedSlot === slot.time ? 'selected' : ''}"
-                        onclick="selectSlot('${escapeHtml(slot.time)}')">
-                        ${escapeHtml(slot.time)}
-                    </button>
-                `).join('')}
-            </div>
-        </div>
-    `;
+function formatDateDMY(date) {
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}.${month}.${year}`;
+}
+
+function getMonthName(date) {
+    const months = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+                   'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+    return `${months[date.getMonth()]} ${date.getFullYear()}`;
+}
+
+function previousMonth() {
+    State.currentMonth = new Date(State.currentMonth.getFullYear(), State.currentMonth.getMonth() - 1, 1);
+    renderBookingScreen();
+}
+
+function nextMonth() {
+    State.currentMonth = new Date(State.currentMonth.getFullYear(), State.currentMonth.getMonth() + 1, 1);
+    renderBookingScreen();
 }
 
 // ===== ОБРАБОТЧИКИ СОБЫТИЙ =====
 
-async function selectService(serviceName) {
-    State.selectedService = serviceName;
-    State.currentTab = 'booking';
-    
-    // ✅ Меняем активную вкладку БЕЗ рендера
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.tab === 'booking');
-    });
-    
-    showLoader();
-    
-    try {
-        await loadAvailableDates(serviceName);
-    } catch (error) {
-        console.error('Ошибка в selectService:', error);
-    } finally {
-        // ✅ ВСЕГДА убираем loader
-        hideLoader();
+function selectService(serviceName) {
+    // Проверяем, это ли информационная кнопка
+    const service = State.services.find(s => s.name === serviceName);
+    if (service && service.type === 'info_button') {
+        tg.showAlert('Информация о клубе появится позже');
+        return;
     }
     
-    // ✅ Рендерим ПОСЛЕ загрузки дат
-    renderBookingScreen();
+    // Переключаемся на экран бронирования
+    switchTab('booking');
+    
+    // Устанавливаем выбранную услугу
+    setTimeout(() => {
+        onServiceSelect(serviceName);
+    }, 100);
 }
 
-async function handleServiceSelect(serviceName) {
+async function onServiceSelect(serviceName) {
     if (!serviceName) return;
     
+    // 🔧 ИСПРАВЛЕНИЕ 6: Очищаем предыдущее состояние
     State.selectedService = serviceName;
     State.selectedDate = null;
     State.selectedSlot = null;
-    
-    showLoader();
-    
-    try {
-        await loadAvailableDates(serviceName);
-    } catch (error) {
-        console.error('Ошибка в handleServiceSelect:', error);
-    } finally {
-        hideLoader();
-    }
+    State.availableSlots = [];
+    State.currentMonth = new Date();
     
     renderBookingScreen();
+    
+    // Загружаем доступные даты
+    try {
+        showLoader();
+        await loadAvailableDates(serviceName);
+        hideLoader();
+        renderBookingScreen();
+    } catch (error) {
+        hideLoader();
+        // 🔧 ИСПРАВЛЕНИЕ 7: Не показываем ошибку при отмене
+        if (!error.isCancelled) {
+            console.error('Ошибка загрузки дат:', error);
+            tg.showAlert('Не удалось загрузить доступные даты');
+        }
+    }
 }
 
 async function selectDate(dateStr) {
     State.selectedDate = dateStr;
     State.selectedSlot = null;
+    State.availableSlots = [];
     
-    // ✅ Первый рендер: показываем выбранную дату
     renderBookingScreen();
-    
-    // ✅ Конвертируем ISO "2026-01-28" → DD.MM.YYYY "28.01.2026"
-    const [year, month, day] = dateStr.split('-');
-    const dateMakeFormat = `${day}.${month}.${year}`;
-    
-    console.log(`🔄 Конвертация даты: ${dateStr} → ${dateMakeFormat}`);
-    
-    showLoader();
     
     try {
-        await loadAvailableSlots(State.selectedService, dateMakeFormat);
-    } catch (error) {
-        console.error('Ошибка в selectDate:', error);
-    } finally {
+        showLoader();
+        await loadAvailableSlots(State.selectedService, dateStr);
         hideLoader();
+        renderBookingScreen();
+        
+        if (tg.HapticFeedback) {
+            tg.HapticFeedback.impactOccurred('light');
+        }
+    } catch (error) {
+        hideLoader();
+        // 🔧 ИСПРАВЛЕНИЕ 8: Не показываем ошибку при отмене
+        if (!error.isCancelled) {
+            console.error('Ошибка загрузки слотов:', error);
+            tg.showAlert('Не удалось загрузить доступные слоты');
+        }
     }
-    
-    // ✅ Второй рендер: показываем слоты
-    renderBookingScreen();
 }
 
 function selectSlot(time) {
     State.selectedSlot = time;
     renderBookingScreen();
+    
+    if (tg.HapticFeedback) {
+        tg.HapticFeedback.impactOccurred('medium');
+    }
 }
 
-function changeMonth(direction) {
-    const newMonth = new Date(State.currentMonth);
-    newMonth.setMonth(newMonth.getMonth() + direction);
-    State.currentMonth = newMonth;
-    
-    // ✅ Очищаем выбранную дату и слоты при смене месяца
-    State.selectedDate = null;
-    State.selectedSlot = null;
-    State.availableSlots = [];
-    
-    renderBookingScreen();
-}
-
-async function handleBookingConfirm() {
+async function confirmBooking() {
     if (!State.selectedService || !State.selectedDate || !State.selectedSlot) {
-        alert('Пожалуйста, выберите услугу, дату и время');
+        tg.showAlert('Пожалуйста, выберите услугу, дату и время');
         return;
     }
     
-    // ✅ Конвертируем дату ISO → DD.MM.YYYY
-    const [year, month, day] = State.selectedDate.split('-');
-    const dateMakeFormat = `${day}.${month}.${year}`;
+    const confirmed = confirm(
+        `Подтвердить запись?\n\n` +
+        `Услуга: ${State.selectedService}\n` +
+        `Дата: ${State.selectedDate}\n` +
+        `Время: ${State.selectedSlot}`
+    );
     
-    const confirmMessage = `Подтвердить запись на ${dateMakeFormat} в ${State.selectedSlot}?`;
-    
-    // Используем обычный confirm для совместимости
-    if (!confirm(confirmMessage)) {
-        return;
-    }
-    
-    await performBooking(dateMakeFormat);
-}
-
-async function performBooking(dateFormatted) {
-    showLoader();
+    if (!confirmed) return;
     
     try {
+        showLoader();
         const result = await BookingAPI.bookSlot(
             State.selectedService,
-            dateFormatted,
+            State.selectedDate,
             State.selectedSlot
         );
-        
         hideLoader();
         
-        console.log('📥 Результат бронирования:', result);
-        
-        if (result.booking && result.booking.zoom_link) {
-            // Бот отправит сообщение - закрываем Mini App
+        if (result.success) {
+            tg.showAlert('Запись успешно создана!');
+            
+            // 🔧 ИСПРАВЛЕНИЕ 9: Очищаем состояние после успешной записи
             State.selectedService = null;
             State.selectedDate = null;
             State.selectedSlot = null;
+            State.availableDates = [];
             State.availableSlots = [];
             
-            // Закрываем Mini App чтобы пользователь увидел сообщение от бота
-            setTimeout(() => {
-                if (tg.close) {
-                    tg.close();
-                }
-            }, 500);
-        } else {
-            alert('Запись создана, проверьте сообщения от бота');
-            switchTab('services');
+            switchTab('mybookings');
         }
     } catch (error) {
         hideLoader();
-        console.error('❌ Ошибка бронирования:', error);
-        alert('Ошибка при бронировании. Попробуйте еще раз.');
+        console.error('Ошибка бронирования:', error);
+        tg.showAlert('Не удалось создать запись. Попробуйте позже.');
     }
 }
 
-function openPayment(type) {
-    const url = CONFIG.PAYMENT_URLS[type];
+function openPayment(method) {
+    const url = CONFIG.PAYMENT_URLS[method];
     if (url && !url.includes('your-payment-link')) {
         tg.openLink(url);
     } else {
@@ -661,21 +625,14 @@ async function loadAvailableDates(serviceName) {
             slots_count: 1      // Всегда доступна
         }));
         
-        // ✅ Очищаем выбранную дату и слот при загрузке новых дат
-        State.selectedDate = null;
-        State.selectedSlot = null;
-        State.availableSlots = [];
-        
         console.log('✅ Обработанные даты (State.availableDates):', State.availableDates);
         console.log('🎯 Set для календаря:', Array.from(new Set(State.availableDates.map(d => d.date))));
         
     } catch (error) {
         console.error('❌ Ошибка загрузки дат:', error);
         State.availableDates = [];
-        // Не показываем alert если запрос был отменён
-        if (error.message !== 'Request cancelled') {
-            alert('Не удалось загрузить доступные даты');
-        }
+        // 🔧 ИСПРАВЛЕНИЕ 10: Пробрасываем ошибку дальше для обработки
+        throw error;
     }
 }
 
@@ -715,12 +672,20 @@ async function loadAvailableSlots(serviceName, date) {
         if (tg.HapticFeedback) {
             tg.HapticFeedback.notificationOccurred('error');
         }
+        // 🔧 ИСПРАВЛЕНИЕ 11: Пробрасываем ошибку дальше
+        throw error;
     }
 }
 
 // ===== УПРАВЛЕНИЕ БРОНИРОВАНИЯМИ =====
 
 async function loadUserBookings() {
+    // 🔧 ИСПРАВЛЕНИЕ 12: Проверяем активность приложения
+    if (!State.isAppActive) {
+        console.log('⏸️ Приложение неактивно - отмена загрузки записей');
+        return;
+    }
+    
     showLoader();
     try {
         const result = await BookingAPI.getUserBookings();
@@ -746,9 +711,9 @@ async function loadUserBookings() {
         State.userBookings = [];
         hideLoader();
         
-        // Не показываем alert если запрос отменён
-        if (error.message !== 'Request cancelled') {
-            alert('Не удалось загрузить записи');
+        // 🔧 ИСПРАВЛЕНИЕ 13: Не показываем alert если запрос отменён или приложение неактивно
+        if (!error.isCancelled && error.message !== 'App is inactive') {
+            tg.showAlert('Не удалось загрузить записи');
         }
     }
 }
@@ -765,25 +730,46 @@ async function cancelBooking(slotId) {
         hideLoader();
         
         if (result.success) {
-            alert('Запись отменена');
+            tg.showAlert('Запись отменена');
             await loadUserBookings();
             renderMyBookingsScreen();
         }
     } catch (error) {
         hideLoader();
         console.error('❌ Ошибка отмены:', error);
-        alert('Не удалось отменить запись');
+        tg.showAlert('Не удалось отменить запись');
     }
 }
 
 // ===== НАВИГАЦИЯ МЕЖДУ ТАБАМИ =====
 
 function switchTab(tabName) {
+    // 🔧 ИСПРАВЛЕНИЕ 14: Отменяем предыдущие запросы при переключении таба
+    if (State.currentRequest) {
+        State.currentRequest.abort();
+        State.currentRequest = null;
+    }
+    
+    // 🔧 ИСПРАВЛЕНИЕ 15: Очищаем таймауты
+    if (State.bookingsLoadTimeout) {
+        clearTimeout(State.bookingsLoadTimeout);
+        State.bookingsLoadTimeout = null;
+    }
+    
     State.currentTab = tabName;
     
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.tab === tabName);
     });
+    
+    // 🔧 ИСПРАВЛЕНИЕ 16: Очищаем состояние при переключении с booking
+    if (tabName !== 'booking') {
+        State.selectedService = null;
+        State.selectedDate = null;
+        State.selectedSlot = null;
+        State.availableDates = [];
+        State.availableSlots = [];
+    }
     
     switch(tabName) {
         case 'services':
@@ -796,11 +782,6 @@ function switchTab(tabName) {
             renderBookingScreen();
             break;
         case 'mybookings':
-            // ✅ Debounce: отменяем предыдущую загрузку если быстро переключили
-            if (State.bookingsLoadTimeout) {
-                clearTimeout(State.bookingsLoadTimeout);
-            }
-            
             // Показываем loader сразу
             document.getElementById('app').innerHTML = `
                 <h1 class="screen-title fade-in">Мои записи</h1>
@@ -810,10 +791,15 @@ function switchTab(tabName) {
                 </div>
             `;
             
-            // Загружаем с небольшой задержкой
+            // 🔧 ИСПРАВЛЕНИЕ 17: Увеличили debounce до 500ms для стабильности
             State.bookingsLoadTimeout = setTimeout(() => {
-                loadUserBookings().then(() => renderMyBookingsScreen());
-            }, 300);
+                loadUserBookings().then(() => {
+                    // Проверяем что мы всё ещё на том же табе
+                    if (State.currentTab === 'mybookings') {
+                        renderMyBookingsScreen();
+                    }
+                });
+            }, 500);
             break;
     }
 }
@@ -855,18 +841,47 @@ function getServiceDescription(serviceName) {
 // ===== ИНИЦИАЛИЗАЦИЯ ПРИЛОЖЕНИЯ =====
 
 async function initApp() {
-    console.log('Mini App initialized for user:', USER.fullName);
+    console.log('🚀 Mini App initialized for user:', USER.fullName);
+    console.log('📱 Telegram Web App version:', tg.version);
     
     // Настройка обработчиков табов
     document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', (e) => {
+            // 🔧 ИСПРАВЛЕНИЕ 18: Предотвращаем множественные клики
+            if (btn.disabled) return;
+            btn.disabled = true;
+            
             switchTab(btn.dataset.tab);
+            
+            // Разблокируем кнопку через 300ms
+            setTimeout(() => {
+                btn.disabled = false;
+            }, 300);
         });
     });
     
     await loadServices();
     renderServicesScreen();
+    
+    console.log('✅ Приложение инициализировано');
 }
+
+// 🔧 ИСПРАВЛЕНИЕ 19: Добавляем глобальный обработчик ошибок
+window.addEventListener('error', (event) => {
+    console.error('🚨 Глобальная ошибка:', event.error);
+    // Не показываем alert для отменённых запросов
+    if (event.error && !event.error.isCancelled) {
+        // Можно добавить отправку логов на сервер
+    }
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+    console.error('🚨 Необработанный Promise rejection:', event.reason);
+    // Не показываем alert для отменённых запросов
+    if (event.reason && !event.reason.isCancelled) {
+        // Можно добавить отправку логов на сервер
+    }
+});
 
 // Запуск при загрузке страницы
 if (document.readyState === 'loading') {
