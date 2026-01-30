@@ -37,7 +37,7 @@ export function switchTab(tabName) {
         State.currentTab = tabName;
 
         // Обновляем UI вкладок
-        document.querySelectorAll('.tab').forEach(tab => {
+        document.querySelectorAll('.tab-btn').forEach(tab => {
             tab.classList.toggle('active', tab.dataset.tab === tabName);
         });
 
@@ -349,18 +349,27 @@ function selectSlot(slot) {
     showBookButton();
 }
 
+// Флаг для отслеживания подписки на MainButton
+let mainButtonHandlerAttached = false;
+
 /**
  * Показать кнопку бронирования
  */
 function showBookButton() {
     const service = CONFIG.SERVICES.find(s => s.id === State.selectedService);
-    const buttonText = service?.price > 0 
+    const buttonText = service?.price > 0
         ? `Забронировать за ${service.price} ₸`
         : 'Забронировать бесплатно';
 
     window.Telegram.WebApp.MainButton.setText(buttonText);
     window.Telegram.WebApp.MainButton.show();
+
+    // Удаляем предыдущий обработчик перед добавлением нового
+    if (mainButtonHandlerAttached) {
+        window.Telegram.WebApp.MainButton.offClick(handleBooking);
+    }
     window.Telegram.WebApp.MainButton.onClick(handleBooking);
+    mainButtonHandlerAttached = true;
 }
 
 /**
@@ -552,7 +561,7 @@ export function initApp() {
     console.log('✅ Приложение инициализировано');
 
     // Обработчики вкладок
-    document.querySelectorAll('.tab').forEach(tab => {
+    document.querySelectorAll('.tab-btn').forEach(tab => {
         tab.addEventListener('click', () => {
             const tabName = tab.dataset.tab;
             switchTab(tabName);

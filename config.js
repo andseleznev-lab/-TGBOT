@@ -1,6 +1,6 @@
 // ===== КОНФИГУРАЦИЯ ПРИЛОЖЕНИЯ =====
 
-const CONFIG = {
+export const CONFIG = {
     // URL вебхука Make.com
     API: {
         main: 'https://hook.eu2.make.com/r61db3c6xvtw765yx3hy8629561k23ba'
@@ -73,37 +73,50 @@ const CONFIG = {
     }
 };
 
+// Делаем CONFIG доступным глобально для обратной совместимости
+window.CONFIG = CONFIG;
+
 // ===== ИНИЦИАЛИЗАЦИЯ TELEGRAM WEB APP =====
-const tg = window.Telegram.WebApp;
-tg.ready();
-tg.expand();
-tg.enableClosingConfirmation();
-
-// Применяем тему Telegram
-if (tg.themeParams.bg_color) {
-    document.documentElement.style.setProperty('--tg-theme-bg-color', tg.themeParams.bg_color);
-}
-if (tg.themeParams.text_color) {
-    document.documentElement.style.setProperty('--tg-theme-text-color', tg.themeParams.text_color);
-}
-
-// Получаем данные пользователя
-const USER = {
-    id: tg.initDataUnsafe?.user?.id || 0,
-    firstName: tg.initDataUnsafe?.user?.first_name || 'Гость',
-    lastName: tg.initDataUnsafe?.user?.last_name || '',
-    username: tg.initDataUnsafe?.user?.username || '',
-    get fullName() {
-        return `${this.firstName} ${this.lastName}`.trim();
+export function initTelegram() {
+    const tg = window.Telegram?.WebApp;
+    if (!tg) {
+        console.error('Telegram WebApp not available');
+        return null;
     }
-};
+
+    tg.ready();
+    tg.expand();
+    tg.enableClosingConfirmation();
+
+    // Применяем тему Telegram
+    if (tg.themeParams.bg_color) {
+        document.documentElement.style.setProperty('--tg-theme-bg-color', tg.themeParams.bg_color);
+    }
+    if (tg.themeParams.text_color) {
+        document.documentElement.style.setProperty('--tg-theme-text-color', tg.themeParams.text_color);
+    }
+
+    // Получаем данные пользователя
+    const USER = {
+        id: tg.initDataUnsafe?.user?.id || 0,
+        firstName: tg.initDataUnsafe?.user?.first_name || 'Гость',
+        lastName: tg.initDataUnsafe?.user?.last_name || '',
+        username: tg.initDataUnsafe?.user?.username || '',
+        get fullName() {
+            return `${this.firstName} ${this.lastName}`.trim();
+        }
+    };
+
+    // Логирование для отладки
+    console.log('Mini App initialized');
+    console.log('User:', USER);
+    console.log('Webhook URL:', CONFIG.API.main);
+
+    return { tg, USER };
+}
 
 // Генератор уникальных ID для защиты от двойного клика
-function generateRequestId() {
-    return `${USER.id}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+export function generateRequestId() {
+    const userId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 0;
+    return `${userId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
-
-// Логирование для отладки
-console.log('Mini App initialized');
-console.log('User:', USER);
-console.log('Webhook URL:', CONFIG.API.main);

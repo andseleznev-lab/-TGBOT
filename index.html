@@ -56,9 +56,58 @@
 
     <!-- Основной контейнер приложения -->
     <div id="app">
-        <div class="loader-container">
-            <div class="glass-loader"></div>
-            <p>Загрузка...</p>
+        <!-- Вкладка: Услуги -->
+        <div class="tab-content active" id="services-tab">
+            <h1 class="screen-title">Услуги</h1>
+            <div id="services-list" class="services-grid">
+                <!-- Услуги рендерятся через JS -->
+            </div>
+        </div>
+
+        <!-- Вкладка: Оплата -->
+        <div class="tab-content" id="payment-tab">
+            <h1 class="screen-title">Оплата</h1>
+            <div class="payment-grid">
+                <div class="glass-card payment-card" onclick="window.open('https://your-payment-link.com/card', '_blank')">
+                    <div class="payment-icon">💳</div>
+                    <div class="payment-info">
+                        <div class="payment-name">Банковская карта</div>
+                        <div class="payment-description">Visa, Mastercard, Мир</div>
+                    </div>
+                    <div class="payment-arrow">→</div>
+                </div>
+                <div class="glass-card payment-card" onclick="window.open('https://your-payment-link.com/kaspi', '_blank')">
+                    <div class="payment-icon">📱</div>
+                    <div class="payment-info">
+                        <div class="payment-name">Kaspi</div>
+                        <div class="payment-description">Перевод на Kaspi Gold</div>
+                    </div>
+                    <div class="payment-arrow">→</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Вкладка: Запись -->
+        <div class="tab-content" id="booking-tab">
+            <h1 class="screen-title">Запись</h1>
+            <div class="booking-container">
+                <div id="calendar-loading" class="loader-container" style="display: none;">
+                    <div class="glass-loader"></div>
+                    <p>Загрузка дат...</p>
+                </div>
+                <div id="calendar-error" class="error" style="display: none;"></div>
+                <div id="calendar" class="glass-card calendar-container"></div>
+                <h2 class="section-title" id="slots-title" style="display: none;">Выберите время</h2>
+                <div id="time-slots" class="slots-grid"></div>
+            </div>
+        </div>
+
+        <!-- Вкладка: Мои записи -->
+        <div class="tab-content" id="my-bookings-tab">
+            <h1 class="screen-title">Мои записи</h1>
+            <div id="bookings-list">
+                <!-- Бронирования рендерятся через JS -->
+            </div>
         </div>
     </div>
 
@@ -89,7 +138,7 @@
             </svg>
             <span>Запись</span>
         </button>
-        <button class="tab-btn" data-tab="mybookings">
+        <button class="tab-btn" data-tab="my-bookings">
             <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M9 11l3 3L22 4"></path>
                 <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
@@ -319,18 +368,33 @@ Telegram User ID: ${window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 'unknow
         console.log('🔧 Eruda DevTools initialized');
     </script>
 
-    <!-- Основные скрипты приложения -->
-    <script src="config.js?v=3"></script>
-    <script src="app.js?v=3"></script>
-    
-    <!-- 📝 Логирование для проверки загрузки -->
-    <script>
-        console.log('✅ index.html loaded - version 3.0');
+    <!-- Основные скрипты приложения (ES Modules) -->
+    <script type="module">
+        import { CONFIG, initTelegram } from './config.js';
+        import { initApp } from './app.js';
+
+        // Делаем CONFIG глобальным
+        window.CONFIG = CONFIG;
+
+        // Инициализация Telegram
+        const telegramData = initTelegram();
+
+        console.log('✅ index.html loaded - version 4.0');
         console.log('📦 Files loaded:', {
             telegram: !!window.Telegram,
             config: !!window.CONFIG,
             eruda: !!window.eruda
         });
+
+        if (telegramData) {
+            console.log('🚀 Mini App initialized for user:', telegramData.USER.firstName);
+            console.log('📱 Telegram Web App version:', window.Telegram.WebApp.version);
+        }
+
+        console.log('✅ Загружены статичные услуги:', CONFIG.SERVICES);
+
+        // Инициализация приложения
+        initApp();
     </script>
 </body>
 </html>

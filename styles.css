@@ -623,6 +623,16 @@ body {
     font-weight: 500;
 }
 
+/* ===== КОНТЕНТ ВКЛАДОК ===== */
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+    animation: fadeIn var(--transition-normal) ease-in;
+}
+
 /* ===== УТИЛИТЫ ===== */
 .hidden {
     display: none !important;
