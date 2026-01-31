@@ -240,13 +240,13 @@ function getErrorType(error, response = null) {
  * Показывает popup с ошибкой и кнопкой "Повторить"
  * @param {string} message - текст ошибки для пользователя
  * @param {Function|null} retryFn - функция для повторного запроса (если null - только кнопка "Отмена")
- * @returns {void}
+ * @returns {boolean} true если popup успешно показан, false если popup уже открыт
  */
 function showErrorPopup(message, retryFn = null) {
     // 🔧 FIX: Проверяем не открыт ли уже popup
     if (State.isPopupOpen) {
         console.warn('⚠️ Popup уже открыт - пропускаем показ нового popup');
-        return;
+        return false; // Возвращаем false - popup НЕ показан
     }
 
     const buttons = [];
@@ -262,6 +262,15 @@ function showErrorPopup(message, retryFn = null) {
     // 🔧 FIX: Устанавливаем флаг что popup открыт
     State.isPopupOpen = true;
 
+    // 🔧 HOTFIX: Fallback сброс флага через 5 секунд
+    // Гарантирует что флаг сбросится даже если Telegram не вызовет callback
+    const fallbackTimeoutId = setTimeout(() => {
+        if (State.isPopupOpen) {
+            console.warn('⚠️ Fallback сброс State.isPopupOpen через 5 секунд');
+            State.isPopupOpen = false;
+        }
+    }, 5000);
+
     try {
         // Показываем Telegram popup
         tg.showPopup({
@@ -272,15 +281,23 @@ function showErrorPopup(message, retryFn = null) {
             // 🔧 FIX: Сбрасываем флаг при закрытии popup
             State.isPopupOpen = false;
 
+            // Очищаем fallback timeout так как callback сработал
+            clearTimeout(fallbackTimeoutId);
+
             // Обработчик нажатия на кнопку
             if (buttonId === 'retry' && retryFn) {
                 retryFn();
             }
         });
+
+        return true; // Popup успешно показан
+
     } catch (error) {
         // 🔧 FIX: Если не удалось показать popup - сбрасываем флаг
         console.error('❌ Ошибка показа popup:', error);
         State.isPopupOpen = false;
+        clearTimeout(fallbackTimeoutId);
+        return false; // Popup НЕ показан
     }
 }
 
@@ -407,7 +424,14 @@ async function handleNetworkError(error, context, retryFn = null, config = {}) {
 
             // Помечаем что retry был сделан и показываем popup
             if (showError) {
-                showErrorPopup(errorInfo.message, retryFn);
+                const popupShown = showErrorPopup(errorInfo.message, retryFn);
+
+                // 🔧 HOTFIX: Если popup не показан (уже открыт другой popup),
+                // НЕ выбрасываем ошибку - иначе получим unhandled rejection
+                if (!popupShown) {
+                    console.warn(`[${context}] Popup не показан (уже открыт) - не выбрасываем ошибку`);
+                    return; // Выходим без выброса ошибки
+                }
             }
 
             throw retryError;
@@ -416,10 +440,17 @@ async function handleNetworkError(error, context, retryFn = null, config = {}) {
 
     // 6. Показываем popup с ошибкой и кнопкой "Повторить" (если showError: true)
     if (showError) {
-        showErrorPopup(errorInfo.message, retryFn);
+        const popupShown = showErrorPopup(errorInfo.message, retryFn);
+
+        // 🔧 HOTFIX: Если popup не показан (уже открыт другой popup),
+        // НЕ выбрасываем ошибку - иначе получим unhandled rejection
+        if (!popupShown) {
+            console.warn(`[${context}] Popup не показан (уже открыт) - не выбрасываем ошибку`);
+            return; // Выходим без выброса ошибки
+        }
     }
 
-    // Пробрасываем ошибку дальше
+    // Пробрасываем ошибку дальше только если popup был показан
     throw error;
 }
 
@@ -977,15 +1008,19 @@ async function loadAvailableDates(serviceName) {
         console.log('🎯 Set для календаря:', Array.from(new Set(State.availableDates.map(d => d.date))));
 
     } catch (error) {
-        // 🔧 FIX: Улучшенное логирование
+        // 🔧 HOTFIX: НЕ пробрасываем ошибку - она уже обработана в handleNetworkError
+        // (показан popup или логирован warning если popup был уже открыт)
         console.error('❌ Ошибка загрузки дат:', {
             name: error?.name,
             message: error?.message,
             isCancelled: error?.isCancelled
         });
+
+        // Устанавливаем пустой массив дат при ошибке
         State.availableDates = [];
-        // 🔧 ИСПРАВЛЕНИЕ 10: Пробрасываем ошибку дальше для обработки
-        throw error;
+
+        // НЕ пробрасываем ошибку - иначе получим unhandled rejection
+        // Popup уже показан пользователю в handleNetworkError
     }
 }
 
@@ -1060,14 +1095,16 @@ async function loadUserBookings() {
         console.log('✅ Обработанные бронирования:', State.userBookings);
         hideLoader();
     } catch (error) {
+        // 🔧 HOTFIX: НЕ пробрасываем ошибку и НЕ показываем дублирующий alert
+        // Ошибка уже обработана в handleNetworkError (показан popup)
         console.error('❌ Ошибка загрузки бронирований:', error);
+
+        // Устанавливаем пустой массив бронирований при ошибке
         State.userBookings = [];
         hideLoader();
-        
-        // 🔧 ИСПРАВЛЕНИЕ 13: Не показываем alert если запрос отменён или приложение неактивно
-        if (!error.isCancelled && error.message !== 'App is inactive') {
-            tg.showAlert('Не удалось загрузить записи');
-        }
+
+        // НЕ показываем дублирующий alert - popup уже показан в handleNetworkError
+        // НЕ пробрасываем ошибку - иначе получим unhandled rejection
     }
 }
 

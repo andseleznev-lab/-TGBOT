@@ -7,7 +7,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <title>Запись на консультацию</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <link rel="stylesheet" href="styles.css?v=11">
+    <link rel="stylesheet" href="styles.css?v=12">
     
     <style>
         /* Стили для кнопки скачивания логов */
@@ -176,12 +176,38 @@
             ]);
         });
         
-        // Перехват необработанных Promise rejection
+        // 🔧 HOTFIX: Улучшенный перехват необработанных Promise rejection
         window.addEventListener('unhandledrejection', (event) => {
+            // Логируем для отладки
             addLog('ERROR', [
-                'Необработанный Promise rejection:',
+                '🚨 Необработанный Promise rejection:',
                 event.reason
             ]);
+
+            console.error('🚨 Unhandled Promise rejection:', event.reason);
+
+            // Предотвращаем дефолтное поведение браузера
+            event.preventDefault();
+
+            // Показываем fallback сообщение пользователю (если ошибка критичная)
+            // НО только если нет уже открытого popup
+            if (window.State && !window.State.isPopupOpen && window.Telegram?.WebApp) {
+                // Проверяем что это не AbortError (отмена запроса - это нормально)
+                const isAbortError = event.reason?.name === 'AbortError' ||
+                                     event.reason?.message === 'App is inactive';
+
+                if (!isAbortError) {
+                    console.warn('⚠️ Показываем fallback popup для unhandled rejection');
+
+                    try {
+                        window.Telegram.WebApp.showAlert(
+                            'Произошла непредвиденная ошибка. Попробуйте перезагрузить приложение.'
+                        );
+                    } catch (e) {
+                        console.error('❌ Не удалось показать fallback alert:', e);
+                    }
+                }
+            }
         });
         
         // 📥 ФУНКЦИЯ СКАЧИВАНИЯ ЛОГОВ
@@ -320,12 +346,12 @@ Telegram User ID: ${window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 'unknow
     </script>
 
     <!-- Основные скрипты приложения -->
-    <script src="config.js?v=11"></script>
-    <script src="app.js?v=11"></script>
+    <script src="config.js?v=12"></script>
+    <script src="app.js?v=12"></script>
 
     <!-- 📝 Логирование для проверки загрузки -->
     <script>
-        console.log('✅ index.html loaded - version 11.0 - [T-001] Network error handling - FIX: Request cancellation');
+        console.log('✅ index.html loaded - version 12.0 - [T-001] HOTFIX: Unhandled rejections & popup race condition');
         console.log('📦 Files loaded:', {
             telegram: !!window.Telegram,
             config: !!window.CONFIG,
