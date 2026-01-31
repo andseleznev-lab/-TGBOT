@@ -82,57 +82,57 @@ document.addEventListener('visibilitychange', () => {
 
 // ===== API ФУНКЦИИ =====
 class BookingAPI {
+    /**
+     * Универсальный метод для всех API запросов к Make.com
+     * Теперь использует fetchWithErrorHandling для централизованной обработки ошибок
+     * @param {string} action - действие (get_available_dates, book_slot, etc.)
+     * @param {Object} data - дополнительные данные для запроса
+     * @returns {Promise<Object>} результат от Make.com
+     */
     static async request(action, data = {}) {
         const startTime = Date.now();
-        console.log(`⏱️ [${action}] Начало запроса...`);
 
-        // 🔧 ИСПРАВЛЕНИЕ 3: Не выполняем запросы если приложение неактивно
+        // Проверка активности приложения
         if (!State.isAppActive) {
             console.log(`⏸️ [${action}] Приложение неактивно - запрос отменён`);
-            throw new Error('App is inactive');
+            const inactiveError = new Error('App is inactive');
+            inactiveError.name = 'AbortError'; // Маркируем как AbortError чтобы не показывать popup
+            throw inactiveError;
         }
 
+        // Определяем retryable на основе типа операции
+        // GET операции (чтение) - можно retry автоматически
+        // POST операции (создание/изменение) - только manual retry
+        const readOnlyActions = ['get_services', 'get_available_dates', 'get_slots', 'get_user_bookings'];
+        const retryable = readOnlyActions.includes(action);
+
         try {
-            const controller = new AbortController();
-            // 🔧 FIX: Сохраняем controller локально, не заменяя глобальный
-            const currentController = controller;
-
-            // Обновляем глобальный State.currentRequest для возможности отмены через switchTab
-            State.currentRequest = controller;
-
-            const timeoutId = setTimeout(() => currentController.abort(), 30000); // 30 сек таймаут
-
-            console.log(`📤 [${action}] Отправка запроса...`);
-
-            const response = await fetch(CONFIG.API.main, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
+            // Используем fetchWithErrorHandling для обработки ошибок
+            const response = await fetchWithErrorHandling(
+                CONFIG.API.main,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        action: action,
+                        user_id: USER.id,
+                        user_name: USER.fullName,
+                        init_data: tg.initData,
+                        request_id: generateRequestId(),
+                        ...data
+                    })
                 },
-                body: JSON.stringify({
-                    action: action,
-                    user_id: USER.id,
-                    user_name: USER.fullName,
-                    init_data: tg.initData,
-                    request_id: generateRequestId(),
-                    ...data
-                }),
-                signal: currentController.signal
-            });
+                {
+                    context: action, // Контекст для логов
+                    retryable: retryable, // Auto-retry только для GET
+                    timeout: CONFIG.API.timeout || 10000,
+                    showError: true // Показываем popup при ошибках
+                }
+            );
 
-            clearTimeout(timeoutId);
-
-            // Очищаем глобальный State только если это наш controller
-            if (State.currentRequest === currentController) {
-                State.currentRequest = null;
-            }
-
-            console.log(`📥 [${action}] Ответ получен: ${response.status}`);
-
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
-            }
-
+            // Парсим ответ
             console.log(`📄 [${action}] Чтение текста...`);
             const text = await response.text();
             console.log(`🔍 [${action}] RAW response:`, text.substring(0, 200) + '...');
@@ -146,35 +146,23 @@ class BookingAPI {
                 throw new Error('Invalid JSON from server');
             }
 
+            // Проверяем success флаг от Make.com
             if (!result.success) {
-                throw new Error(result.error || 'Неизвестная ошибка');
+                throw new Error(result.error || 'Неизвестная ошибка от сервера');
             }
 
             const duration = Date.now() - startTime;
             console.log(`✅ [${action}] Успешно за ${duration}ms`);
 
             return result;
+
         } catch (error) {
             const duration = Date.now() - startTime;
+            console.error(`❌ [${action}] Request failed после ${duration}ms`);
 
-            // Очищаем глобальный State при ошибке
-            State.currentRequest = null;
-
-            if (error.name === 'AbortError') {
-                console.log(`⏱️ [${action}] ОТМЕНЁН или ТАЙМАУТ после ${duration}ms`);
-                // 🔧 ИСПРАВЛЕНИЕ 5: Выбрасываем специальную ошибку для отмены
-                const cancelError = new Error('Request cancelled');
-                cancelError.isCancelled = true;
-                throw cancelError;
-            } else {
-                // 🔧 FIX: Улучшенное логирование ошибок
-                console.error(`❌ [${action}] Ошибка после ${duration}ms:`, {
-                    name: error.name,
-                    message: error.message,
-                    error: error
-                });
-                throw error;
-            }
+            // Ошибка уже обработана в fetchWithErrorHandling
+            // Просто пробрасываем дальше
+            throw error;
         }
     }
 
@@ -204,6 +192,315 @@ class BookingAPI {
     
     static async cancelBooking(slotId) {
         return await this.request('cancel_booking', { slot_id: slotId });
+    }
+}
+
+// ===== ОБРАБОТКА СЕТЕВЫХ ОШИБОК =====
+
+/**
+ * Определяет тип ошибки для правильного сообщения пользователю
+ * @param {Error} error - объект ошибки
+ * @param {Response|null} response - объект response (если есть)
+ * @returns {{type: string, message: string}} Тип и сообщение ошибки
+ */
+function getErrorType(error, response = null) {
+    // Запрос отменён (переключение табов, выход из приложения)
+    if (error.name === 'AbortError') {
+        return { type: 'ABORT', message: 'Request cancelled' };
+    }
+
+    // Таймаут запроса (>10 секунд)
+    if (error.name === 'TimeoutError' || error.message === 'Request timeout') {
+        return { type: 'TIMEOUT', message: 'Сервер не отвечает. Попробуйте позже' };
+    }
+
+    // Проблемы с сетью (нет интернета, DNS failed, etc)
+    if (error.message === 'Load failed' ||
+        error.message === 'Failed to fetch' ||
+        error.message === 'Network request failed') {
+        return { type: 'NETWORK', message: 'Проверьте интернет-соединение' };
+    }
+
+    // Ошибка сервера (5xx)
+    if (response && response.status >= 500) {
+        return { type: 'SERVER', message: 'Сервер временно недоступен. Попробуйте позже' };
+    }
+
+    // Ошибка клиента (4xx)
+    if (response && response.status >= 400) {
+        return { type: 'CLIENT', message: 'Некорректный запрос' };
+    }
+
+    // Неизвестная ошибка
+    return { type: 'UNKNOWN', message: 'Произошла ошибка. Попробуйте позже' };
+}
+
+/**
+ * Показывает popup с ошибкой и кнопкой "Повторить"
+ * @param {string} message - текст ошибки для пользователя
+ * @param {Function|null} retryFn - функция для повторного запроса (если null - только кнопка "Отмена")
+ * @returns {void}
+ */
+function showErrorPopup(message, retryFn = null) {
+    const buttons = [];
+
+    // Добавляем кнопку "Повторить" если передана функция retry
+    if (retryFn) {
+        buttons.push({ id: 'retry', type: 'default', text: 'Повторить' });
+    }
+
+    // Всегда добавляем кнопку "Отмена"
+    buttons.push({ type: 'cancel' });
+
+    // Показываем Telegram popup
+    tg.showPopup({
+        title: 'Ошибка',
+        message: message,
+        buttons: buttons
+    }, (buttonId) => {
+        // Обработчик нажатия на кнопку
+        if (buttonId === 'retry' && retryFn) {
+            retryFn();
+        }
+    });
+}
+
+/**
+ * Показывает индикатор повторной попытки запроса
+ * @param {string} message - текст сообщения (например, "Повторная попытка...")
+ * @returns {void}
+ */
+function showRetryIndicator(message) {
+    // Безопасное создание элементов через DOM API (не innerHTML!)
+    const overlay = document.createElement('div');
+    overlay.id = 'retry-indicator';
+    overlay.className = 'retry-overlay';
+
+    const content = document.createElement('div');
+    content.className = 'retry-content glass-card';
+
+    const loader = document.createElement('div');
+    loader.className = 'loader';
+
+    const text = document.createElement('p');
+    text.textContent = message; // Безопасно - используем textContent вместо innerHTML
+
+    content.appendChild(loader);
+    content.appendChild(text);
+    overlay.appendChild(content);
+    document.body.appendChild(overlay);
+}
+
+/**
+ * Скрывает индикатор повторной попытки
+ * @returns {void}
+ */
+function hideRetryIndicator() {
+    const overlay = document.getElementById('retry-indicator');
+    if (overlay) {
+        overlay.remove();
+    }
+}
+
+/**
+ * Выполняет повторный запрос с задержкой
+ * @param {Function} requestFn - функция запроса для повтора
+ * @param {number} delay - задержка перед retry в мс (default: 2000)
+ * @returns {Promise<any>} результат выполнения requestFn
+ */
+async function retryRequest(requestFn, delay = 2000) {
+    console.log(`🔄 Retry after ${delay}ms...`);
+
+    // Показать индикатор retry
+    showRetryIndicator('Повторная попытка...');
+
+    // Ждём заданную задержку
+    await new Promise(resolve => setTimeout(resolve, delay));
+
+    try {
+        // Выполняем запрос
+        const result = await requestFn();
+        hideRetryIndicator();
+        return result;
+    } catch (error) {
+        // Скрываем индикатор даже при ошибке
+        hideRetryIndicator();
+        throw error;
+    }
+}
+
+/**
+ * Обработка сетевой ошибки - логирование, определение типа, показ popup, retry
+ * @param {Error} error - объект ошибки
+ * @param {string} context - контекст запроса (для логов, например "get_available_dates")
+ * @param {Function|null} retryFn - функция для повторного запроса
+ * @param {Object} config - конфигурация обработки ошибок
+ * @param {boolean} config.retryable - можно ли делать auto-retry (true для GET запросов)
+ * @param {boolean} config.showError - показывать ли popup ошибки
+ * @param {boolean} config.hasRetried - флаг что retry уже был сделан
+ * @returns {Promise<void>}
+ */
+async function handleNetworkError(error, context, retryFn = null, config = {}) {
+    const {
+        retryable = false,
+        showError = true,
+        hasRetried = false
+    } = config;
+
+    // 1. Определяем тип ошибки
+    const errorInfo = getErrorType(error, null);
+
+    // 2. Логируем детали (без чувствительных данных)
+    console.error(`[${context}] ${errorInfo.type} error: ${error.message}`, {
+        type: errorInfo.type,
+        errorName: error.name,
+        stack: error.stack
+    });
+
+    // 3. Haptic feedback при ошибке
+    if (tg.HapticFeedback) {
+        tg.HapticFeedback.notificationOccurred('error');
+    }
+
+    // 4. Игнорируем AbortError (запрос отменён пользователем или системой)
+    if (errorInfo.type === 'ABORT') {
+        console.log(`[${context}] Request cancelled - не показываем ошибку`);
+        return;
+    }
+
+    // 5. Автоматический retry для retryable запросов (только 1 раз!)
+    if (retryable && !hasRetried && retryFn) {
+        console.log(`[${context}] Автоматический retry (1/1)...`);
+
+        try {
+            // Используем retryRequest для показа индикатора
+            const result = await retryRequest(retryFn, 2000);
+
+            // Если retry успешен - показываем success feedback
+            if (tg.HapticFeedback) {
+                tg.HapticFeedback.notificationOccurred('success');
+            }
+
+            return result;
+        } catch (retryError) {
+            // Retry failed - показываем popup с manual retry
+            console.error(`[${context}] Автоматический retry failed`);
+
+            // Помечаем что retry был сделан и показываем popup
+            if (showError) {
+                showErrorPopup(errorInfo.message, retryFn);
+            }
+
+            throw retryError;
+        }
+    }
+
+    // 6. Показываем popup с ошибкой и кнопкой "Повторить" (если showError: true)
+    if (showError) {
+        showErrorPopup(errorInfo.message, retryFn);
+    }
+
+    // Пробрасываем ошибку дальше
+    throw error;
+}
+
+/**
+ * Универсальная обёртка для fetch с обработкой ошибок, timeout и retry
+ * @param {string} url - URL для запроса
+ * @param {Object} options - опции для fetch (method, headers, body, etc.)
+ * @param {Object} config - конфигурация обработки ошибок
+ * @param {number} config.timeout - таймаут в мс (default: 10000 из CONFIG.API.timeout)
+ * @param {boolean} config.retryable - можно ли делать auto-retry (default: true для GET)
+ * @param {string} config.context - контекст для логирования (например, "get_available_dates")
+ * @param {boolean} config.showError - показывать ли popup ошибки (default: true)
+ * @returns {Promise<Response>} Response объект или throws Error
+ */
+async function fetchWithErrorHandling(url, options = {}, config = {}) {
+    const {
+        timeout = CONFIG.API.timeout || 10000,
+        retryable = (options.method || 'GET').toUpperCase() === 'GET', // GET по умолчанию retryable
+        context = 'api_request',
+        showError = true
+    } = config;
+
+    // Создаём AbortController для этого запроса
+    const controller = new AbortController();
+    const signal = controller.signal;
+
+    // Устанавливаем timeout
+    const timeoutId = setTimeout(() => {
+        console.log(`⏱️ [${context}] Timeout после ${timeout}ms - отменяем запрос`);
+        controller.abort();
+    }, timeout);
+
+    // Функция для retry (будет передана в handleNetworkError)
+    const retryFn = () => fetchWithErrorHandling(url, options, {
+        ...config,
+        hasRetried: true // Помечаем что retry уже был
+    });
+
+    try {
+        console.log(`📤 [${context}] Начало запроса к ${url}`);
+
+        // Выполняем fetch с signal для возможности отмены
+        const response = await fetch(url, {
+            ...options,
+            signal: signal
+        });
+
+        // Очищаем timeout после успешного ответа
+        clearTimeout(timeoutId);
+
+        console.log(`📥 [${context}] Ответ получен: ${response.status}`);
+
+        // Если ответ успешный - возвращаем response
+        if (response.ok) {
+            return response;
+        }
+
+        // Если ответ не успешный (4xx, 5xx) - обрабатываем как ошибку
+        const errorInfo = getErrorType(null, response);
+        const httpError = new Error(errorInfo.message);
+        httpError.name = 'HTTPError';
+        httpError.status = response.status;
+
+        // Передаём в handleNetworkError
+        await handleNetworkError(httpError, context, retryFn, {
+            retryable,
+            showError,
+            hasRetried: config.hasRetried || false
+        });
+
+        // Если handleNetworkError не выбросил ошибку (не должно произойти), выбрасываем сами
+        throw httpError;
+
+    } catch (error) {
+        // Очищаем timeout в любом случае
+        clearTimeout(timeoutId);
+
+        // Если это AbortError из-за timeout, создаём TimeoutError
+        if (error.name === 'AbortError') {
+            const timeoutError = new Error('Request timeout');
+            timeoutError.name = 'TimeoutError';
+
+            await handleNetworkError(timeoutError, context, retryFn, {
+                retryable,
+                showError,
+                hasRetried: config.hasRetried || false
+            });
+
+            throw timeoutError;
+        }
+
+        // Для всех остальных ошибок (Network, etc) - передаём в handleNetworkError
+        await handleNetworkError(error, context, retryFn, {
+            retryable,
+            showError,
+            hasRetried: config.hasRetried || false
+        });
+
+        // handleNetworkError уже выбросил ошибку, но на всякий случай:
+        throw error;
     }
 }
 

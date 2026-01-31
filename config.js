@@ -3,7 +3,8 @@
 const CONFIG = {
     // URL вебхука Make.com
     API: {
-        main: 'https://hook.eu2.make.com/r61db3c6xvtw765yx3hy8629561k23ba'
+        main: 'https://hook.eu2.make.com/r61db3c6xvtw765yx3hy8629561k23ba',
+        timeout: 10000  // 10 секунд timeout для всех API запросов
     },
     
     // Статичный список услуг (не загружаем из Make)

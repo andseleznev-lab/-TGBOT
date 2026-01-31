@@ -643,6 +643,42 @@ body {
     }
 }
 
+/* ===== RETRY INDICATOR ===== */
+.retry-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.retry-content {
+    padding: 30px;
+    text-align: center;
+    min-width: 200px;
+}
+
+.retry-content .loader {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--accent-primary);
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 15px;
+}
+
+.retry-content p {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 16px;
+}
+
 /* ===== АДАПТИВНОСТЬ ===== */
 @media (max-width: 380px) {
     .screen-title {
