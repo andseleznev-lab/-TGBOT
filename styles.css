@@ -327,99 +327,9 @@ body {
 
 /* ===== КАЛЕНДАРЬ ===== */
 .calendar-container {
-    padding: 0;
+    padding: 24px;
 }
 
-/* Месяц */
-.month {
-    margin-bottom: 32px;
-}
-
-.month-header {
-    font-size: 20px;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin-bottom: 16px;
-    text-align: center;
-    padding: 12px;
-    background: var(--glass-bg);
-    border-radius: 16px;
-    border: 1px solid var(--glass-border);
-}
-
-/* Сетка дней */
-.days-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 4px;
-}
-
-/* Заголовки дней недели */
-.day-header {
-    text-align: center;
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--text-secondary);
-    padding: 8px 4px;
-    text-transform: uppercase;
-}
-
-/* День в календаре */
-.day {
-    aspect-ratio: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 12px;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all var(--transition-fast);
-    position: relative;
-    background: var(--glass-bg);
-    border: 1px solid var(--glass-border);
-    min-height: 44px;
-}
-
-.day.empty {
-    background: transparent;
-    border: none;
-    cursor: default;
-}
-
-.day.disabled {
-    color: var(--text-light);
-    opacity: 0.3;
-    cursor: not-allowed;
-    background: transparent;
-    border: 1px solid transparent;
-}
-
-.day.available {
-    background: linear-gradient(135deg, #A8C686, #C5E1A5) !important;
-    border: 2px solid #7FA860 !important;
-    color: #2C5F2D !important;
-    font-weight: 700 !important;
-    box-shadow: 0 4px 12px rgba(168, 198, 134, 0.5) !important;
-}
-
-.day.available:hover {
-    background: var(--accent-gradient) !important;
-    color: var(--text-white) !important;
-    border-color: var(--accent-primary) !important;
-    transform: scale(1.05);
-    box-shadow: 0 6px 16px rgba(212, 165, 116, 0.6) !important;
-}
-
-.day.selected {
-    background: var(--accent-gradient) !important;
-    color: var(--text-white) !important;
-    border: 2px solid var(--accent-primary) !important;
-    box-shadow: 0 4px 12px rgba(212, 165, 116, 0.4) !important;
-    font-weight: 700 !important;
-}
-
-/* Удаляем старые неиспользуемые стили */
 .calendar-header {
     display: flex;
     justify-content: space-between;
@@ -462,6 +372,118 @@ body {
     cursor: not-allowed;
 }
 
+.weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    margin-bottom: 12px;
+}
+
+.weekday {
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    padding: 8px;
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+}
+
+.calendar-day {
+    aspect-ratio: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    position: relative;
+    background: var(--glass-bg);
+    border: 1px solid transparent;
+}
+
+.calendar-day.empty {
+    background: transparent;
+    cursor: default;
+}
+
+.calendar-day.past {
+    color: var(--text-light);
+    opacity: 0.4;
+    cursor: not-allowed;
+    background: transparent;
+}
+
+.calendar-day.available {
+    background: linear-gradient(135deg, #A8C686, #C5E1A5) !important;
+    border: 3px solid #7FA860 !important;
+    color: var(--text-primary) !important;
+    font-weight: 700 !important;
+    box-shadow: 0 4px 12px rgba(168, 198, 134, 0.5) !important;
+    animation: pulse-available 2s ease-in-out infinite !important;
+}
+
+@keyframes pulse-available {
+    0%, 100% {
+        box-shadow: 0 4px 12px rgba(168, 198, 134, 0.5);
+    }
+    50% {
+        box-shadow: 0 6px 20px rgba(168, 198, 134, 0.7);
+    }
+}
+
+.calendar-day.available:hover {
+    background: var(--accent-gradient);
+    color: var(--text-white);
+    border-color: var(--accent-primary);
+    transform: scale(1.1);
+    box-shadow: 0 6px 16px rgba(212, 165, 116, 0.6) !important;
+}
+
+.calendar-day.selected {
+    background: var(--accent-gradient);
+    color: var(--text-white);
+    border-color: var(--accent-primary);
+    box-shadow: 0 4px 12px rgba(212, 165, 116, 0.4);
+}
+
+.calendar-day.disabled {
+    color: var(--text-light);
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.day-number {
+    font-size: 15px;
+}
+
+.slots-indicator {
+    position: absolute;
+    bottom: 4px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent-primary);
+}
+
+.calendar-day.available .slots-indicator {
+    background: #FF5722 !important;
+    width: 8px;
+    height: 8px;
+    box-shadow: 0 0 8px rgba(255, 87, 34, 0.8);
+}
+
+.calendar-day.selected .slots-indicator {
+    background: var(--text-white);
+}
+
 /* ===== СЛОТЫ ВРЕМЕНИ ===== */
 .slots-container {
     padding: 24px;
@@ -478,39 +500,6 @@ body {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
     gap: 12px;
-}
-
-#time-slots {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-    gap: 12px;
-    margin-top: 16px;
-}
-
-.time-slot {
-    padding: 16px;
-    background: var(--glass-bg);
-    border: 2px solid var(--glass-border);
-    border-radius: 16px;
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--text-primary);
-    cursor: pointer;
-    transition: all var(--transition-fast);
-    text-align: center;
-}
-
-.time-slot:hover {
-    background: var(--accent-light);
-    border-color: var(--accent-primary);
-    transform: scale(1.05);
-}
-
-.time-slot.selected {
-    background: var(--accent-gradient);
-    border-color: var(--accent-primary);
-    color: var(--text-white);
-    box-shadow: 0 4px 12px rgba(212, 165, 116, 0.3);
 }
 
 .slot-btn {
@@ -549,20 +538,6 @@ body {
     padding: 32px;
     color: var(--text-secondary);
     font-size: 16px;
-}
-
-.loading, .error, .empty-state {
-    text-align: center;
-    padding: 32px;
-    color: var(--text-secondary);
-    font-size: 16px;
-}
-
-.error {
-    color: var(--error);
-    background: var(--error-light);
-    border-radius: 16px;
-    padding: 24px;
 }
 
 /* ===== КНОПКА ПОДТВЕРЖДЕНИЯ ===== */
@@ -604,13 +579,13 @@ body {
     right: 0;
     display: flex;
     justify-content: space-around;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
-    border-top: 1px solid rgba(212, 165, 116, 0.15);
-    padding: 8px;
-    padding-bottom: calc(8px + env(safe-area-inset-bottom));
-    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
+    background: var(--glass-bg);
+    backdrop-filter: blur(30px) saturate(180%);
+    -webkit-backdrop-filter: blur(30px) saturate(180%);
+    border-top: 1px solid var(--glass-border);
+    padding: 12px 8px;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+    box-shadow: 0 -8px 32px rgba(139, 116, 95, 0.1);
     z-index: 1000;
 }
 
@@ -619,136 +594,33 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
     background: none;
     border: none;
-    padding: 8px 4px;
+    padding: 8px;
     cursor: pointer;
-    color: #A89580;
+    color: var(--text-secondary);
     transition: all var(--transition-fast);
-    border-radius: 10px;
+    border-radius: 12px;
 }
 
 .tab-btn:hover {
-    background: rgba(212, 165, 116, 0.1);
+    background: var(--glass-bg);
 }
 
 .tab-btn.active {
-    color: #D4A574;
-}
-
-.tab-btn.active .tab-icon {
-    color: #D4A574;
+    color: var(--accent-primary);
 }
 
 .tab-icon {
-    width: 26px;
-    height: 26px;
+    width: 24px;
+    height: 24px;
     stroke-width: 2;
-    color: inherit;
 }
 
 .tab-btn span {
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 500;
-    color: inherit;
-}
-
-/* ===== КОНТЕНТ ВКЛАДОК ===== */
-.tab-content {
-    display: none;
-}
-
-.tab-content.active {
-    display: block;
-    animation: fadeIn var(--transition-normal) ease-in;
-}
-
-/* ===== КАРТОЧКИ БРОНИРОВАНИЙ ===== */
-.booking-card {
-    background: var(--glass-bg);
-    backdrop-filter: blur(20px) saturate(180%);
-    border-radius: var(--border-radius);
-    border: 1px solid var(--glass-border);
-    padding: 20px;
-    margin-bottom: 16px;
-    box-shadow: var(--glass-shadow);
-    transition: all var(--transition-normal);
-}
-
-.booking-card:hover {
-    box-shadow: var(--glass-shadow-hover);
-    transform: translateY(-2px);
-}
-
-.booking-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 12px;
-}
-
-.booking-service {
-    font-size: 18px;
-    font-weight: 600;
-    color: var(--text-primary);
-}
-
-.booking-date {
-    font-size: 14px;
-    color: var(--text-secondary);
-    background: var(--glass-bg);
-    padding: 6px 12px;
-    border-radius: 12px;
-    border: 1px solid var(--glass-border);
-}
-
-.booking-time {
-    font-size: 24px;
-    font-weight: 700;
-    background: var(--accent-gradient);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    margin-bottom: 16px;
-}
-
-.btn-zoom, .btn-cancel {
-    width: 100%;
-    padding: 14px;
-    border: none;
-    border-radius: 14px;
-    font-size: 15px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all var(--transition-fast);
-    margin-top: 8px;
-}
-
-.btn-zoom {
-    background: var(--accent-gradient);
-    color: var(--text-white);
-    box-shadow: 0 4px 12px rgba(212, 165, 116, 0.3);
-}
-
-.btn-zoom:hover {
-    box-shadow: 0 6px 16px rgba(212, 165, 116, 0.4);
-    transform: translateY(-1px);
-}
-
-.btn-cancel {
-    background: var(--error-light);
-    color: var(--error);
-    border: 1px solid var(--glass-border);
-}
-
-.btn-cancel:hover {
-    background: var(--error);
-    color: var(--text-white);
-}
-
-.btn-cancel:active, .btn-zoom:active {
-    transform: translateY(0);
 }
 
 /* ===== УТИЛИТЫ ===== */
