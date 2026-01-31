@@ -492,16 +492,16 @@ function selectService(serviceName) {
 
 async function onServiceSelect(serviceName) {
     if (!serviceName) return;
-    
+
     // 🔧 ИСПРАВЛЕНИЕ 6: Очищаем предыдущее состояние
     State.selectedService = serviceName;
     State.selectedDate = null;
     State.selectedSlot = null;
     State.availableSlots = [];
     State.currentMonth = new Date();
-    
+
     renderBookingScreen();
-    
+
     // Загружаем доступные даты
     try {
         showLoader();
@@ -510,6 +510,8 @@ async function onServiceSelect(serviceName) {
         renderBookingScreen();
     } catch (error) {
         hideLoader();
+        renderBookingScreen(); // 🔧 FIX: Перерисовываем экран даже при ошибке
+
         // 🔧 ИСПРАВЛЕНИЕ 7: Не показываем ошибку при отмене
         if (!error.isCancelled) {
             console.error('Ошибка загрузки дат:', error);
@@ -522,20 +524,22 @@ async function selectDate(dateStr) {
     State.selectedDate = dateStr;
     State.selectedSlot = null;
     State.availableSlots = [];
-    
+
     renderBookingScreen();
-    
+
     try {
         showLoader();
         await loadAvailableSlots(State.selectedService, dateStr);
         hideLoader();
         renderBookingScreen();
-        
+
         if (tg.HapticFeedback) {
             tg.HapticFeedback.impactOccurred('light');
         }
     } catch (error) {
         hideLoader();
+        renderBookingScreen(); // 🔧 FIX: Перерисовываем экран даже при ошибке
+
         // 🔧 ИСПРАВЛЕНИЕ 8: Не показываем ошибку при отмене
         if (!error.isCancelled) {
             console.error('Ошибка загрузки слотов:', error);
@@ -790,15 +794,22 @@ function switchTab(tabName) {
                     <p>Загрузка...</p>
                 </div>
             `;
-            
+
             // 🔧 ИСПРАВЛЕНИЕ 17: Увеличили debounce до 500ms для стабильности
             State.bookingsLoadTimeout = setTimeout(() => {
-                loadUserBookings().then(() => {
-                    // Проверяем что мы всё ещё на том же табе
-                    if (State.currentTab === 'mybookings') {
-                        renderMyBookingsScreen();
-                    }
-                });
+                loadUserBookings()
+                    .then(() => {
+                        // Проверяем что мы всё ещё на том же табе
+                        if (State.currentTab === 'mybookings') {
+                            renderMyBookingsScreen();
+                        }
+                    })
+                    .catch((error) => {
+                        // 🔧 FIX: Рендерим экран даже при ошибке
+                        if (State.currentTab === 'mybookings') {
+                            renderMyBookingsScreen();
+                        }
+                    });
             }, 500);
             break;
     }
