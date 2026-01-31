@@ -604,13 +604,13 @@ body {
     right: 0;
     display: flex;
     justify-content: space-around;
-    background: var(--glass-bg);
-    backdrop-filter: blur(30px) saturate(180%);
-    -webkit-backdrop-filter: blur(30px) saturate(180%);
-    border-top: 1px solid var(--glass-border);
-    padding: 12px 8px;
-    padding-bottom: calc(12px + env(safe-area-inset-bottom));
-    box-shadow: 0 -8px 32px rgba(139, 116, 95, 0.1);
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-top: 1px solid rgba(212, 165, 116, 0.15);
+    padding: 8px;
+    padding-bottom: calc(8px + env(safe-area-inset-bottom));
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
     z-index: 1000;
 }
 
@@ -619,33 +619,39 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
     background: none;
     border: none;
-    padding: 8px;
+    padding: 8px 4px;
     cursor: pointer;
-    color: var(--text-secondary);
+    color: #A89580;
     transition: all var(--transition-fast);
-    border-radius: 12px;
+    border-radius: 10px;
 }
 
 .tab-btn:hover {
-    background: var(--glass-bg);
+    background: rgba(212, 165, 116, 0.1);
 }
 
 .tab-btn.active {
-    color: var(--accent-primary);
+    color: #D4A574;
+}
+
+.tab-btn.active .tab-icon {
+    color: #D4A574;
 }
 
 .tab-icon {
-    width: 24px;
-    height: 24px;
+    width: 26px;
+    height: 26px;
     stroke-width: 2;
+    color: inherit;
 }
 
 .tab-btn span {
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 500;
+    color: inherit;
 }
 
 /* ===== КОНТЕНТ ВКЛАДОК ===== */
