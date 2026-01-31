@@ -85,28 +85,25 @@ class BookingAPI {
     static async request(action, data = {}) {
         const startTime = Date.now();
         console.log(`⏱️ [${action}] Начало запроса...`);
-        
+
         // 🔧 ИСПРАВЛЕНИЕ 3: Не выполняем запросы если приложение неактивно
         if (!State.isAppActive) {
             console.log(`⏸️ [${action}] Приложение неактивно - запрос отменён`);
             throw new Error('App is inactive');
         }
-        
-        // ✅ Отменяем предыдущий запрос если он ещё выполняется
-        if (State.currentRequest) {
-            console.log('⚠️ Отмена предыдущего запроса');
-            State.currentRequest.abort();
-            State.currentRequest = null;  // 🔧 ИСПРАВЛЕНИЕ 4: Сразу очищаем
-        }
-        
+
         try {
             const controller = new AbortController();
-            State.currentRequest = controller;  // Сохраняем для отмены
-            
-            const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 сек таймаут
-            
+            // 🔧 FIX: Сохраняем controller локально, не заменяя глобальный
+            const currentController = controller;
+
+            // Обновляем глобальный State.currentRequest для возможности отмены через switchTab
+            State.currentRequest = controller;
+
+            const timeoutId = setTimeout(() => currentController.abort(), 30000); // 30 сек таймаут
+
             console.log(`📤 [${action}] Отправка запроса...`);
-            
+
             const response = await fetch(CONFIG.API.main, {
                 method: 'POST',
                 headers: {
@@ -120,12 +117,16 @@ class BookingAPI {
                     request_id: generateRequestId(),
                     ...data
                 }),
-                signal: controller.signal
+                signal: currentController.signal
             });
-            
+
             clearTimeout(timeoutId);
-            State.currentRequest = null;  // Очищаем после завершения
-            
+
+            // Очищаем глобальный State только если это наш controller
+            if (State.currentRequest === currentController) {
+                State.currentRequest = null;
+            }
+
             console.log(`📥 [${action}] Ответ получен: ${response.status}`);
 
             if (!response.ok) {
@@ -135,7 +136,7 @@ class BookingAPI {
             console.log(`📄 [${action}] Чтение текста...`);
             const text = await response.text();
             console.log(`🔍 [${action}] RAW response:`, text.substring(0, 200) + '...');
-            
+
             let result;
             try {
                 result = JSON.parse(text);
@@ -144,19 +145,21 @@ class BookingAPI {
                 console.error('Текст который не парсится:', text);
                 throw new Error('Invalid JSON from server');
             }
-            
+
             if (!result.success) {
                 throw new Error(result.error || 'Неизвестная ошибка');
             }
 
             const duration = Date.now() - startTime;
             console.log(`✅ [${action}] Успешно за ${duration}ms`);
-            
+
             return result;
         } catch (error) {
             const duration = Date.now() - startTime;
-            State.currentRequest = null;  // Очищаем при ошибке
-            
+
+            // Очищаем глобальный State при ошибке
+            State.currentRequest = null;
+
             if (error.name === 'AbortError') {
                 console.log(`⏱️ [${action}] ОТМЕНЁН или ТАЙМАУТ после ${duration}ms`);
                 // 🔧 ИСПРАВЛЕНИЕ 5: Выбрасываем специальную ошибку для отмены
@@ -164,7 +167,12 @@ class BookingAPI {
                 cancelError.isCancelled = true;
                 throw cancelError;
             } else {
-                console.error(`❌ [${action}] Ошибка после ${duration}ms:`, error);
+                // 🔧 FIX: Улучшенное логирование ошибок
+                console.error(`❌ [${action}] Ошибка после ${duration}ms:`, {
+                    name: error.name,
+                    message: error.message,
+                    error: error
+                });
                 throw error;
             }
         }
@@ -622,18 +630,23 @@ async function loadAvailableDates(serviceName) {
         const result = await BookingAPI.getAvailableDates(serviceName);
         console.log('📥 RAW ответ от Make:', result);
         console.log('📥 Массив дат от Make:', result.dates);
-        
+
         // ✅ ИСПРАВЛЕНИЕ: преобразуем строки в объекты
-        State.availableDates = (result.dates || []).map(dateStr => ({ 
+        State.availableDates = (result.dates || []).map(dateStr => ({
             date: dateStr,      // "28.01.2026"
             slots_count: 1      // Всегда доступна
         }));
-        
+
         console.log('✅ Обработанные даты (State.availableDates):', State.availableDates);
         console.log('🎯 Set для календаря:', Array.from(new Set(State.availableDates.map(d => d.date))));
-        
+
     } catch (error) {
-        console.error('❌ Ошибка загрузки дат:', error);
+        // 🔧 FIX: Улучшенное логирование
+        console.error('❌ Ошибка загрузки дат:', {
+            name: error?.name,
+            message: error?.message,
+            isCancelled: error?.isCancelled
+        });
         State.availableDates = [];
         // 🔧 ИСПРАВЛЕНИЕ 10: Пробрасываем ошибку дальше для обработки
         throw error;
