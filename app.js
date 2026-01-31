@@ -99,6 +99,9 @@ export async function selectService(serviceId) {
 async function loadAvailableDates() {
     if (!State.selectedService) {
         console.log('⚠️ Услуга не выбрана');
+        window.Telegram.WebApp.showAlert('Пожалуйста, сначала выберите услугу', () => {
+            switchTab('services');
+        });
         return;
     }
 
@@ -143,17 +146,24 @@ async function loadAvailableDates() {
 
     } catch (error) {
         console.error('❌ Ошибка загрузки дат:', error);
-        
+
         // Игнорируем ошибки отмены
         if (error.isCancelled) {
+            console.log('⚠️ Запрос загрузки дат был отменён');
             return;
         }
 
         if (loadingEl) loadingEl.style.display = 'none';
-        if (errorEl) {
-            errorEl.textContent = 'Не удалось загрузить даты';
-            errorEl.style.display = 'block';
-        }
+        if (calendarEl) calendarEl.style.display = 'block';
+
+        // Показываем понятное сообщение пользователю
+        window.Telegram.WebApp.showAlert(
+            'Не удалось загрузить доступные даты. Попробуйте обновить страницу.',
+            () => {
+                // Предлагаем вернуться к выбору услуги
+                switchTab('services');
+            }
+        );
     }
 }
 
@@ -458,16 +468,19 @@ async function loadUserBookings() {
 
     } catch (error) {
         console.error('❌ Ошибка загрузки бронирований:', error);
-        
+
         if (error.isCancelled) {
+            console.log('⚠️ Запрос загрузки бронирований был отменён');
             return;
         }
 
-        bookingsContainer.innerHTML = '<div class="error">Не удалось загрузить записи</div>';
-        window.Telegram.WebApp.showPopup({
-            message: 'Не удалось загрузить записи',
-            buttons: [{ type: 'close' }]
-        });
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'error';
+        errorDiv.textContent = 'Не удалось загрузить записи. Попробуйте обновить страницу.';
+        bookingsContainer.innerHTML = '';
+        bookingsContainer.appendChild(errorDiv);
+
+        window.Telegram.WebApp.showAlert('Не удалось загрузить ваши записи. Проверьте подключение к интернету и попробуйте снова.');
     }
 }
 

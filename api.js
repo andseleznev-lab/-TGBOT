@@ -8,7 +8,7 @@ const cache = new Map();
 const CACHE_TTL = 60000; // 60 секунд
 
 // Таймаут запросов
-const REQUEST_TIMEOUT = 15000; // 15 секунд
+const REQUEST_TIMEOUT = 30000; // 30 секунд
 
 // Получаем данные пользователя из Telegram
 function getUserData() {
@@ -55,7 +55,7 @@ async function apiRequest(action, params = {}) {
     const signal = currentController.signal;
 
     const userData = getUserData();
-    const requestId = `${userData.user_id}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const requestId = `${userData.user_id}_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 
     const body = {
         action,
