@@ -57,7 +57,8 @@ const State = {
     userBookings: [],
     currentRequest: null,  // Для отмены запросов
     bookingsLoadTimeout: null,  // Для debounce загрузки записей
-    isAppActive: true  // 🔧 ИСПРАВЛЕНИЕ 1: Флаг активности приложения
+    isAppActive: true,  // 🔧 ИСПРАВЛЕНИЕ 1: Флаг активности приложения
+    isPopupOpen: false  // 🔧 FIX: Флаг открытого popup (предотвращает "Popup is already opened")
 };
 
 // 🔧 ИСПРАВЛЕНИЕ 2: Обработка visibility change для корректной работы при выходе/входе
@@ -242,6 +243,12 @@ function getErrorType(error, response = null) {
  * @returns {void}
  */
 function showErrorPopup(message, retryFn = null) {
+    // 🔧 FIX: Проверяем не открыт ли уже popup
+    if (State.isPopupOpen) {
+        console.warn('⚠️ Popup уже открыт - пропускаем показ нового popup');
+        return;
+    }
+
     const buttons = [];
 
     // Добавляем кнопку "Повторить" если передана функция retry
@@ -252,17 +259,29 @@ function showErrorPopup(message, retryFn = null) {
     // Всегда добавляем кнопку "Отмена"
     buttons.push({ type: 'cancel' });
 
-    // Показываем Telegram popup
-    tg.showPopup({
-        title: 'Ошибка',
-        message: message,
-        buttons: buttons
-    }, (buttonId) => {
-        // Обработчик нажатия на кнопку
-        if (buttonId === 'retry' && retryFn) {
-            retryFn();
-        }
-    });
+    // 🔧 FIX: Устанавливаем флаг что popup открыт
+    State.isPopupOpen = true;
+
+    try {
+        // Показываем Telegram popup
+        tg.showPopup({
+            title: 'Ошибка',
+            message: message,
+            buttons: buttons
+        }, (buttonId) => {
+            // 🔧 FIX: Сбрасываем флаг при закрытии popup
+            State.isPopupOpen = false;
+
+            // Обработчик нажатия на кнопку
+            if (buttonId === 'retry' && retryFn) {
+                retryFn();
+            }
+        });
+    } catch (error) {
+        // 🔧 FIX: Если не удалось показать popup - сбрасываем флаг
+        console.error('❌ Ошибка показа popup:', error);
+        State.isPopupOpen = false;
+    }
 }
 
 /**
@@ -423,9 +442,19 @@ async function fetchWithErrorHandling(url, options = {}, config = {}) {
         showError = true
     } = config;
 
+    // 🔧 FIX: Отменяем предыдущий запрос если есть
+    if (State.currentRequest && !config.hasRetried) {
+        console.log(`🛑 [${context}] Отменяем предыдущий запрос`);
+        State.currentRequest.abort();
+        State.currentRequest = null;
+    }
+
     // Создаём AbortController для этого запроса
     const controller = new AbortController();
     const signal = controller.signal;
+
+    // 🔧 FIX: Сохраняем в State для возможности отмены при переключении табов
+    State.currentRequest = controller;
 
     // Устанавливаем timeout
     const timeoutId = setTimeout(() => {
@@ -450,6 +479,11 @@ async function fetchWithErrorHandling(url, options = {}, config = {}) {
 
         // Очищаем timeout после успешного ответа
         clearTimeout(timeoutId);
+
+        // 🔧 FIX: Очищаем State.currentRequest после успешного ответа
+        if (State.currentRequest === controller) {
+            State.currentRequest = null;
+        }
 
         console.log(`📥 [${context}] Ответ получен: ${response.status}`);
 
@@ -477,6 +511,11 @@ async function fetchWithErrorHandling(url, options = {}, config = {}) {
     } catch (error) {
         // Очищаем timeout в любом случае
         clearTimeout(timeoutId);
+
+        // 🔧 FIX: Очищаем State.currentRequest при ошибке
+        if (State.currentRequest === controller) {
+            State.currentRequest = null;
+        }
 
         // Если это AbortError из-за timeout, создаём TimeoutError
         if (error.name === 'AbortError') {
