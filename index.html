@@ -7,7 +7,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <title>Запись на консультацию</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <link rel="stylesheet" href="styles.css?v=13">
+    <link rel="stylesheet" href="styles.css?v=14">
     
     <style>
         /* Стили для кнопки скачивания логов */
@@ -346,12 +346,12 @@ Telegram User ID: ${window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 'unknow
     </script>
 
     <!-- Основные скрипты приложения -->
-    <script src="config.js?v=13"></script>
-    <script src="app.js?v=13"></script>
+    <script src="config.js?v=14"></script>
+    <script src="app.js?v=14"></script>
 
     <!-- 📝 Логирование для проверки загрузки -->
     <script>
-        console.log('✅ index.html loaded - version 13.0 - [T-001] localStorage cache with stale-while-revalidate');
+        console.log('✅ index.html loaded - version 14.0 - [T-001] FIX: Исправлена ошибка загрузки слотов (удалён вызов несуществующей функции)');
         console.log('📦 Files loaded:', {
             telegram: !!window.Telegram,
             config: !!window.CONFIG,

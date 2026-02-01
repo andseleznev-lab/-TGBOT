@@ -1289,7 +1289,7 @@ async function loadAvailableSlots(serviceName, date) {
         // ✅ Кеш свежий - показываем мгновенно
         console.log(`📦 Загружены слоты из кеша для ${serviceName}/${date} (свежие)`);
         State.availableSlots = cached.data;
-        renderTimeSlots(); // Сразу отрисовываем слоты
+        // UI обновится через renderBookingScreen() в selectDate()
 
         // 🔄 В фоне обновляем данные от Make.com (stale-while-revalidate)
         console.log(`🔄 Обновление слотов для ${serviceName}/${date} в фоне...`);
@@ -1301,7 +1301,7 @@ async function loadAvailableSlots(serviceName, date) {
         // ⏰ Кеш устарел - показываем старые данные
         console.log(`📦 Загружены слоты из кеша для ${serviceName}/${date} (устаревшие) - обновление...`);
         State.availableSlots = cached.data;
-        renderTimeSlots(); // Показываем старые данные
+        // UI обновится через renderBookingScreen() в selectDate()
     }
 
     // 🌐 Загружаем свежие данные от Make.com
@@ -1353,8 +1353,7 @@ async function loadAvailableSlotsFromAPI(serviceName, date, cacheKey, cacheTTL, 
 
         console.log(`🎯 Слоты для даты ${date}:`, State.availableSlots);
 
-        // Обновляем UI
-        renderTimeSlots();
+        // UI обновится через renderBookingScreen() в selectDate()
 
     } catch (error) {
         console.error('❌ Ошибка загрузки слотов:', error);
@@ -1364,17 +1363,16 @@ async function loadAvailableSlotsFromAPI(serviceName, date, cacheKey, cacheTTL, 
         if (cached) {
             console.log('📦 Показываем старые слоты из кеша при ошибке');
             State.availableSlots = cached.data;
-            renderTimeSlots();
+            // UI обновится через renderBookingScreen() в selectDate()
         } else {
             // Кеша нет - показываем пустой массив
             State.availableSlots = [];
             if (tg.HapticFeedback) {
                 tg.HapticFeedback.notificationOccurred('error');
             }
+            // Пробрасываем ошибку только если нет кеша
+            throw error;
         }
-
-        // 🔧 ИСПРАВЛЕНИЕ 11: Пробрасываем ошибку дальше
-        throw error;
     }
 }
 
