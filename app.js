@@ -55,7 +55,7 @@ const State = {
     currentMonth: new Date(),
     isLoading: false,
     userBookings: [],
-    currentRequest: null,  // Для отмены запросов
+    requestControllers: {},  // Для отмены запросов по context (исправление race condition)
     bookingsLoadTimeout: null,  // Для debounce загрузки записей
     isAppActive: true,  // 🔧 ИСПРАВЛЕНИЕ 1: Флаг активности приложения
     isPopupOpen: false  // 🔧 FIX: Флаг открытого popup (предотвращает "Popup is already opened")
@@ -74,10 +74,12 @@ document.addEventListener('visibilitychange', () => {
     } else {
         console.log('⏸️ Приложение ушло в фон - отменяем активные запросы');
         // Отменяем все активные запросы при уходе в фон
-        if (State.currentRequest) {
-            State.currentRequest.abort();
-            State.currentRequest = null;
-        }
+        Object.keys(State.requestControllers).forEach(context => {
+            if (State.requestControllers[context]) {
+                State.requestControllers[context].abort();
+                delete State.requestControllers[context];
+            }
+        });
     }
 });
 
@@ -666,19 +668,20 @@ async function fetchWithErrorHandling(url, options = {}, config = {}) {
         showError = true
     } = config;
 
-    // 🔧 FIX: Отменяем предыдущий запрос если есть
-    if (State.currentRequest && !config.hasRetried) {
-        console.log(`🛑 [${context}] Отменяем предыдущий запрос`);
-        State.currentRequest.abort();
-        State.currentRequest = null;
+    // 🔧 FIX: Отменяем предыдущий запрос ТОЛЬКО с тем же context (исправление race condition)
+    // Теперь get_slots не отменяет get_available_dates и наоборот
+    if (State.requestControllers[context] && !config.hasRetried) {
+        console.log(`🛑 [${context}] Отменяем предыдущий запрос с тем же context`);
+        State.requestControllers[context].abort();
+        delete State.requestControllers[context];
     }
 
     // Создаём AbortController для этого запроса
     const controller = new AbortController();
     const signal = controller.signal;
 
-    // 🔧 FIX: Сохраняем в State для возможности отмены при переключении табов
-    State.currentRequest = controller;
+    // 🔧 FIX: Сохраняем в State по context для возможности отмены
+    State.requestControllers[context] = controller;
 
     // Устанавливаем timeout
     const timeoutId = setTimeout(() => {
@@ -704,9 +707,9 @@ async function fetchWithErrorHandling(url, options = {}, config = {}) {
         // Очищаем timeout после успешного ответа
         clearTimeout(timeoutId);
 
-        // 🔧 FIX: Очищаем State.currentRequest после успешного ответа
-        if (State.currentRequest === controller) {
-            State.currentRequest = null;
+        // 🔧 FIX: Очищаем контроллер после успешного ответа
+        if (State.requestControllers[context] === controller) {
+            delete State.requestControllers[context];
         }
 
         console.log(`📥 [${context}] Ответ получен: ${response.status}`);
@@ -736,9 +739,9 @@ async function fetchWithErrorHandling(url, options = {}, config = {}) {
         // Очищаем timeout в любом случае
         clearTimeout(timeoutId);
 
-        // 🔧 FIX: Очищаем State.currentRequest при ошибке
-        if (State.currentRequest === controller) {
-            State.currentRequest = null;
+        // 🔧 FIX: Очищаем контроллер при ошибке
+        if (State.requestControllers[context] === controller) {
+            delete State.requestControllers[context];
         }
 
         // Если это AbortError из-за timeout, создаём TimeoutError
@@ -1515,11 +1518,13 @@ async function cancelBooking(slotId) {
 // ===== НАВИГАЦИЯ МЕЖДУ ТАБАМИ =====
 
 function switchTab(tabName) {
-    // 🔧 ИСПРАВЛЕНИЕ 14: Отменяем предыдущие запросы при переключении таба
-    if (State.currentRequest) {
-        State.currentRequest.abort();
-        State.currentRequest = null;
-    }
+    // 🔧 ИСПРАВЛЕНИЕ 14: Отменяем все активные запросы при переключении таба
+    Object.keys(State.requestControllers).forEach(context => {
+        if (State.requestControllers[context]) {
+            State.requestControllers[context].abort();
+            delete State.requestControllers[context];
+        }
+    });
     
     // 🔧 ИСПРАВЛЕНИЕ 15: Очищаем таймауты
     if (State.bookingsLoadTimeout) {
