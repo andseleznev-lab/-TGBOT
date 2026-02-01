@@ -7,7 +7,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <title>Запись на консультацию</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <link rel="stylesheet" href="styles.css?v=14">
+    <link rel="stylesheet" href="styles.css?v=16">
     
     <style>
         /* Стили для кнопки скачивания логов */
@@ -346,12 +346,12 @@ Telegram User ID: ${window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 'unknow
     </script>
 
     <!-- Основные скрипты приложения -->
-    <script src="config.js?v=15"></script>
-    <script src="app.js?v=15"></script>
+    <script src="config.js?v=16"></script>
+    <script src="app.js?v=16"></script>
 
     <!-- 📝 Логирование для проверки загрузки -->
     <script>
-        console.log('✅ index.html loaded - version 15.0 - [T-001] FIX: Race condition - запросы разных типов больше не отменяют друг друга');
+        console.log('✅ index.html loaded - version 16.0 - [T-001] HOTFIX: Фоновые запросы не показывают popup, отмена запроса не показывает ошибку');
         console.log('📦 Files loaded:', {
             telegram: !!window.Telegram,
             config: !!window.CONFIG,

@@ -283,9 +283,12 @@ class BookingAPI {
      * Теперь использует fetchWithErrorHandling для централизованной обработки ошибок
      * @param {string} action - действие (get_available_dates, book_slot, etc.)
      * @param {Object} data - дополнительные данные для запроса
+     * @param {Object} options - опции запроса
+     * @param {boolean} options.showError - показывать ли popup при ошибке (default: true)
      * @returns {Promise<Object>} результат от Make.com
      */
-    static async request(action, data = {}) {
+    static async request(action, data = {}, options = {}) {
+        const { showError = true } = options;
         const startTime = Date.now();
 
         // Проверка активности приложения
@@ -324,7 +327,7 @@ class BookingAPI {
                     context: action, // Контекст для логов
                     retryable: retryable, // Auto-retry только для GET
                     timeout: CONFIG.API.timeout || 10000,
-                    showError: true // Показываем popup при ошибках
+                    showError: showError // 🔧 HOTFIX v16: Передаём параметр для фоновых запросов
                 }
             );
 
@@ -366,12 +369,12 @@ class BookingAPI {
         return await this.request('get_services');
     }
 
-    static async getAvailableDates(serviceName) {
-        return await this.request('get_available_dates', { service_name: serviceName });
+    static async getAvailableDates(serviceName, options = {}) {
+        return await this.request('get_available_dates', { service_name: serviceName }, options);
     }
 
-    static async getAvailableSlots(serviceName, date) {
-        return await this.request('get_slots', { service_name: serviceName, date: date });
+    static async getAvailableSlots(serviceName, date, options = {}) {
+        return await this.request('get_slots', { service_name: serviceName, date: date }, options);
     }
 
     static async bookSlot(serviceName, date, time) {
@@ -537,13 +540,16 @@ function hideRetryIndicator() {
  * Выполняет повторный запрос с задержкой
  * @param {Function} requestFn - функция запроса для повтора
  * @param {number} delay - задержка перед retry в мс (default: 2000)
+ * @param {boolean} showIndicator - показывать ли индикатор "Повторная попытка" (default: true)
  * @returns {Promise<any>} результат выполнения requestFn
  */
-async function retryRequest(requestFn, delay = 2000) {
+async function retryRequest(requestFn, delay = 2000, showIndicator = true) {
     console.log(`🔄 Retry after ${delay}ms...`);
 
-    // Показать индикатор retry
-    showRetryIndicator('Повторная попытка...');
+    // 🔧 HOTFIX v16: Показываем индикатор только если showIndicator = true
+    if (showIndicator) {
+        showRetryIndicator('Повторная попытка...');
+    }
 
     // Ждём заданную задержку
     await new Promise(resolve => setTimeout(resolve, delay));
@@ -551,11 +557,15 @@ async function retryRequest(requestFn, delay = 2000) {
     try {
         // Выполняем запрос
         const result = await requestFn();
-        hideRetryIndicator();
+        if (showIndicator) {
+            hideRetryIndicator();
+        }
         return result;
     } catch (error) {
         // Скрываем индикатор даже при ошибке
-        hideRetryIndicator();
+        if (showIndicator) {
+            hideRetryIndicator();
+        }
         throw error;
     }
 }
@@ -604,8 +614,8 @@ async function handleNetworkError(error, context, retryFn = null, config = {}) {
         console.log(`[${context}] Автоматический retry (1/1)...`);
 
         try {
-            // Используем retryRequest для показа индикатора
-            const result = await retryRequest(retryFn, 2000);
+            // 🔧 HOTFIX v16: Показываем индикатор только если showError = true
+            const result = await retryRequest(retryFn, 2000, showError);
 
             // Если retry успешен - показываем success feedback
             if (tg.HapticFeedback) {
@@ -739,23 +749,42 @@ async function fetchWithErrorHandling(url, options = {}, config = {}) {
         // Очищаем timeout в любом случае
         clearTimeout(timeoutId);
 
+        // 🔧 HOTFIX v16: Различаем timeout от ручной отмены запроса
+        if (error.name === 'AbortError') {
+            // Проверяем, был ли abort из-за timeout или из-за ручной отмены
+            // Если контроллер ещё в State - это timeout (setTimeout вызвал abort)
+            // Если контроллера нет в State - это ручная отмена (новый запрос/переключение таба)
+            const wasTimeout = State.requestControllers[context] === controller;
+
+            // Очищаем контроллер если это был timeout
+            if (wasTimeout) {
+                delete State.requestControllers[context];
+            }
+
+            if (wasTimeout) {
+                // Это timeout - создаём TimeoutError и показываем popup
+                const timeoutError = new Error('Request timeout');
+                timeoutError.name = 'TimeoutError';
+
+                await handleNetworkError(timeoutError, context, retryFn, {
+                    retryable,
+                    showError,
+                    hasRetried: config.hasRetried || false
+                });
+
+                throw timeoutError;
+            } else {
+                // 🔧 HOTFIX: Это ручная отмена (новый запрос/переключение таба)
+                // НЕ показываем ошибку - это нормальное поведение
+                console.log(`[${context}] Request cancelled (new request) - не показываем ошибку`);
+                error.isCancelled = true;
+                throw error;
+            }
+        }
+
         // 🔧 FIX: Очищаем контроллер при ошибке
         if (State.requestControllers[context] === controller) {
             delete State.requestControllers[context];
-        }
-
-        // Если это AbortError из-за timeout, создаём TimeoutError
-        if (error.name === 'AbortError') {
-            const timeoutError = new Error('Request timeout');
-            timeoutError.name = 'TimeoutError';
-
-            await handleNetworkError(timeoutError, context, retryFn, {
-                retryable,
-                showError,
-                hasRetried: config.hasRetried || false
-            });
-
-            throw timeoutError;
         }
 
         // Для всех остальных ошибок (Network, etc) - передаём в handleNetworkError
@@ -1234,7 +1263,8 @@ async function loadAvailableDates(serviceName) {
  */
 async function loadAvailableDatesFromAPI(serviceName, cacheKey, cacheTTL, isBackground = false) {
     try {
-        const result = await BookingAPI.getAvailableDates(serviceName);
+        // 🔧 HOTFIX v16: Фоновые запросы не показывают popup при ошибке
+        const result = await BookingAPI.getAvailableDates(serviceName, { showError: !isBackground });
         console.log(isBackground ? '🔄 Фоновое обновление дат:' : '📥 RAW ответ от Make:', result);
         console.log('📥 Массив дат от Make:', result.dates);
 
@@ -1321,7 +1351,8 @@ async function loadAvailableSlots(serviceName, date) {
  */
 async function loadAvailableSlotsFromAPI(serviceName, date, cacheKey, cacheTTL, isBackground = false) {
     try {
-        const result = await BookingAPI.getAvailableSlots(serviceName, date);
+        // 🔧 HOTFIX v16: Фоновые запросы не показывают popup при ошибке
+        const result = await BookingAPI.getAvailableSlots(serviceName, date, { showError: !isBackground });
         console.log(isBackground ? '🔄 Фоновое обновление слотов:' : '📥 RAW slots от Make:', result.slots);
 
         // ✅ Make возвращает {array: [...], __IMTAGGLENGTH__: N}
