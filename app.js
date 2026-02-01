@@ -54,9 +54,11 @@ const State = {
     selectedSlot: null,
     currentMonth: new Date(),
     isLoading: false,
+    isLoadingSlots: false,  // 🔧 HOTFIX v20: Флаг загрузки слотов (для отображения loading в секции слотов)
     userBookings: [],
     requestControllers: {},  // Для отмены запросов по context (исправление race condition)
     bookingsLoadTimeout: null,  // Для debounce загрузки записей
+    selectDateDebounceTimer: null,  // 🔧 HOTFIX v20: Debounce для быстрых кликов по датам
     isAppActive: true,  // 🔧 ИСПРАВЛЕНИЕ 1: Флаг активности приложения
     isPopupOpen: false  // 🔧 FIX: Флаг открытого popup (предотвращает "Popup is already opened")
 };
@@ -931,12 +933,17 @@ function renderBookingScreen() {
                     ${State.availableSlots.length > 0 ? `
                         <div class="slots-grid">
                             ${State.availableSlots.map(slot => `
-                                <button 
+                                <button
                                     class="slot-btn ${State.selectedSlot === slot.time ? 'selected' : ''}"
                                     onclick="selectSlot('${slot.time}')">
                                     ${slot.time}
                                 </button>
                             `).join('')}
+                        </div>
+                    ` : State.isLoadingSlots ? `
+                        <div class="slots-loading">
+                            <div class="slots-spinner"></div>
+                            <span>Загрузка слотов...</span>
                         </div>
                     ` : `
                         <div class="slots-empty">
@@ -1128,31 +1135,60 @@ async function onServiceSelect(serviceName) {
 }
 
 async function selectDate(dateStr) {
+    // 🔧 HOTFIX v20: Debounce для быстрых кликов по датам (300ms)
+    // Если пользователь быстро кликает по датам, не запускаем запросы сразу
+    if (State.selectDateDebounceTimer) {
+        clearTimeout(State.selectDateDebounceTimer);
+    }
+
     State.selectedDate = dateStr;
     State.selectedSlot = null;
-    State.availableSlots = [];
+
+    // 🔧 HOTFIX v20: Проверяем есть ли кеш для этой даты
+    const cacheKey = `slots_${State.selectedService}_${dateStr}`;
+    const cached = CacheManager.get(cacheKey);
+
+    if (cached) {
+        // Есть кеш (свежий или устаревший) - показываем сразу
+        State.availableSlots = cached.data;
+        State.isLoadingSlots = !cached.isExpired; // Если кеш устарел - покажем loading на фоне
+        console.log(`📦 [selectDate] Мгновенно показаны слоты из кеша для ${dateStr}`);
+    } else {
+        // Кеша нет - показываем loading
+        State.availableSlots = [];
+        State.isLoadingSlots = true;
+        console.log(`⏳ [selectDate] Нет кеша для ${dateStr} - показываем loading`);
+    }
 
     renderBookingScreen();
 
-    try {
-        showLoader();
-        await loadAvailableSlots(State.selectedService, dateStr);
-        hideLoader();
-        renderBookingScreen();
+    // 🔧 HOTFIX v20: Debounce запроса к API
+    State.selectDateDebounceTimer = setTimeout(async () => {
+        try {
+            await loadAvailableSlots(State.selectedService, dateStr);
 
-        if (tg.HapticFeedback) {
-            tg.HapticFeedback.impactOccurred('light');
-        }
-    } catch (error) {
-        hideLoader();
-        renderBookingScreen(); // 🔧 FIX: Перерисовываем экран даже при ошибке
+            // Проверяем что дата не изменилась за время загрузки
+            if (State.selectedDate === dateStr) {
+                State.isLoadingSlots = false;
+                renderBookingScreen();
 
-        // 🔧 ИСПРАВЛЕНИЕ 8: Не показываем ошибку при отмене
-        if (!error.isCancelled) {
-            console.error('Ошибка загрузки слотов:', error);
-            tg.showAlert('Не удалось загрузить доступные слоты');
+                if (tg.HapticFeedback) {
+                    tg.HapticFeedback.impactOccurred('light');
+                }
+            }
+        } catch (error) {
+            // Проверяем что дата не изменилась
+            if (State.selectedDate === dateStr) {
+                State.isLoadingSlots = false;
+                renderBookingScreen();
+
+                // 🔧 ИСПРАВЛЕНИЕ 8: Не показываем ошибку при отмене
+                if (!error.isCancelled) {
+                    console.error('Ошибка загрузки слотов:', error);
+                }
+            }
         }
-    }
+    }, 150); // 150ms debounce - баланс между отзывчивостью и экономией запросов
 }
 
 function selectSlot(time) {
@@ -1337,27 +1373,18 @@ async function loadAvailableSlots(serviceName, date) {
     // 📦 CACHE: Проверяем кеш перед загрузкой
     const cached = CacheManager.get(cacheKey);
 
-    if (cached && !cached.isExpired) {
-        // ✅ Кеш свежий - показываем мгновенно
-        console.log(`📦 Загружены слоты из кеша для ${serviceName}/${date} (свежие):`, cached.data);
-        State.availableSlots = cached.data;
-        renderBookingScreen(); // 🔧 HOTFIX v18: Мгновенный рендер из кеша
+    // 🔧 HOTFIX v20: Кеш уже обработан в selectDate, здесь только решаем делать ли фоновое обновление
+    const isBackground = cached && !cached.isExpired;
 
-        // 🔄 В фоне обновляем данные от Make.com (stale-while-revalidate)
-        console.log(`🔄 Обновление слотов для ${serviceName}/${date} в фоне...`);
-        loadAvailableSlotsFromAPI(serviceName, date, cacheKey, CACHE_TTL, true);
-        return;
+    if (isBackground) {
+        // ✅ Кеш свежий - только фоновое обновление
+        console.log(`🔄 [loadAvailableSlots] Фоновое обновление для ${serviceName}/${date}`);
+    } else {
+        console.log(`🌐 [loadAvailableSlots] Загрузка от API для ${serviceName}/${date}`);
     }
 
-    if (cached && cached.isExpired) {
-        // ⏰ Кеш устарел - показываем старые данные пока грузим новые
-        console.log(`📦 Загружены слоты из кеша для ${serviceName}/${date} (устаревшие):`, cached.data);
-        State.availableSlots = cached.data;
-        renderBookingScreen(); // 🔧 HOTFIX v18: Мгновенный рендер устаревших данных
-    }
-
-    // 🌐 Загружаем свежие данные от Make.com
-    await loadAvailableSlotsFromAPI(serviceName, date, cacheKey, CACHE_TTL, false);
+    // 🌐 Загружаем данные от Make.com
+    await loadAvailableSlotsFromAPI(serviceName, date, cacheKey, CACHE_TTL, isBackground);
 }
 
 /**
