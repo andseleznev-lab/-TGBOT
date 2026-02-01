@@ -81,6 +81,199 @@ document.addEventListener('visibilitychange', () => {
     }
 });
 
+// ===== CACHE MANAGER =====
+
+/**
+ * Модуль для управления кешированием данных в localStorage
+ * Реализует паттерн "stale-while-revalidate" для оптимизации производительности
+ *
+ * @module CacheManager
+ */
+const CacheManager = {
+    /**
+     * Префикс для ключей кеша (чтобы не конфликтовать с другими данными в localStorage)
+     */
+    PREFIX: 'tgbot_cache_',
+
+    /**
+     * Сохраняет данные в кеш с указанным временем жизни (TTL)
+     *
+     * @param {string} key - Ключ для сохранения (без префикса)
+     * @param {any} data - Данные для сохранения (будут сериализованы в JSON)
+     * @param {number} ttl - Время жизни в миллисекундах (например, 300000 = 5 минут)
+     * @returns {boolean} - true если успешно сохранено, false если ошибка
+     *
+     * @example
+     * CacheManager.set('bookings_123', bookingsData, 300000); // 5 минут
+     */
+    set(key, data, ttl) {
+        try {
+            const cacheKey = this.PREFIX + key;
+            const cacheData = {
+                data: data,
+                timestamp: Date.now(),
+                ttl: ttl
+            };
+
+            localStorage.setItem(cacheKey, JSON.stringify(cacheData));
+            console.log(`📦 [Cache] Сохранено: ${key} (TTL: ${ttl}ms)`);
+            return true;
+        } catch (error) {
+            // QuotaExceededError - localStorage переполнен
+            if (error.name === 'QuotaExceededError') {
+                console.warn(`⚠️ [Cache] localStorage переполнен - не удалось сохранить ${key}`);
+                console.warn('💡 Попробуйте очистить старые данные или уменьшить объём кеша');
+            } else {
+                console.error(`❌ [Cache] Ошибка сохранения ${key}:`, error);
+            }
+            return false;
+        }
+    },
+
+    /**
+     * Получает данные из кеша с проверкой срока годности
+     *
+     * @param {string} key - Ключ для получения (без префикса)
+     * @returns {{data: any, isExpired: boolean}|null} - Объект с данными и флагом устаревания, или null если нет в кеше
+     *
+     * @example
+     * const cached = CacheManager.get('bookings_123');
+     * if (cached) {
+     *   if (!cached.isExpired) {
+     *     // Данные свежие - используем
+     *     renderBookings(cached.data);
+     *   } else {
+     *     // Данные устарели - показываем, но обновляем в фоне
+     *     renderBookings(cached.data);
+     *     loadFreshData();
+     *   }
+     * }
+     */
+    get(key) {
+        try {
+            const cacheKey = this.PREFIX + key;
+            const cached = localStorage.getItem(cacheKey);
+
+            if (!cached) {
+                console.log(`📭 [Cache] Нет данных: ${key}`);
+                return null;
+            }
+
+            const cacheData = JSON.parse(cached);
+            const age = Date.now() - cacheData.timestamp;
+            const isExpired = age > cacheData.ttl;
+
+            if (isExpired) {
+                console.log(`⏰ [Cache] Данные устарели: ${key} (возраст: ${Math.round(age / 1000)}s, TTL: ${Math.round(cacheData.ttl / 1000)}s)`);
+            } else {
+                console.log(`✅ [Cache] Данные актуальны: ${key} (возраст: ${Math.round(age / 1000)}s)`);
+            }
+
+            return {
+                data: cacheData.data,
+                isExpired: isExpired
+            };
+        } catch (error) {
+            console.error(`❌ [Cache] Ошибка чтения ${key}:`, error);
+            return null;
+        }
+    },
+
+    /**
+     * Удаляет конкретные данные из кеша
+     *
+     * @param {string} key - Ключ для удаления (без префикса)
+     * @returns {boolean} - true если успешно удалено
+     *
+     * @example
+     * CacheManager.clear('bookings_123');
+     */
+    clear(key) {
+        try {
+            const cacheKey = this.PREFIX + key;
+            localStorage.removeItem(cacheKey);
+            console.log(`🗑️ [Cache] Удалено: ${key}`);
+            return true;
+        } catch (error) {
+            console.error(`❌ [Cache] Ошибка удаления ${key}:`, error);
+            return false;
+        }
+    },
+
+    /**
+     * Очищает весь кеш приложения (все ключи с префиксом)
+     *
+     * @returns {number} - Количество удалённых записей
+     *
+     * @example
+     * const cleared = CacheManager.clearAll();
+     * console.log(`Удалено ${cleared} записей из кеша`);
+     */
+    clearAll() {
+        try {
+            let count = 0;
+            const keysToRemove = [];
+
+            // Собираем все ключи с нашим префиксом
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith(this.PREFIX)) {
+                    keysToRemove.push(key);
+                }
+            }
+
+            // Удаляем собранные ключи
+            keysToRemove.forEach(key => {
+                localStorage.removeItem(key);
+                count++;
+            });
+
+            console.log(`🗑️ [Cache] Очищен весь кеш: ${count} записей`);
+            return count;
+        } catch (error) {
+            console.error('❌ [Cache] Ошибка очистки всего кеша:', error);
+            return 0;
+        }
+    },
+
+    /**
+     * Вспомогательный метод для инвалидации кеша по паттерну
+     * Удаляет все ключи, которые соответствуют паттерну (например, 'cache_dates_*')
+     *
+     * @param {string} pattern - Паттерн для поиска (например, 'dates_' удалит все cache_dates_*)
+     * @returns {number} - Количество удалённых записей
+     *
+     * @example
+     * // Удалить все кеши дат для всех услуг
+     * CacheManager.clearPattern('dates_');
+     */
+    clearPattern(pattern) {
+        try {
+            let count = 0;
+            const keysToRemove = [];
+            const searchPattern = this.PREFIX + pattern;
+
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith(searchPattern)) {
+                    keysToRemove.push(key);
+                }
+            }
+
+            keysToRemove.forEach(key => {
+                localStorage.removeItem(key);
+                count++;
+            });
+
+            console.log(`🗑️ [Cache] Удалено по паттерну '${pattern}': ${count} записей`);
+            return count;
+        } catch (error) {
+            console.error(`❌ [Cache] Ошибка удаления по паттерну '${pattern}':`, error);
+            return 0;
+        }
+    }
+};
+
 // ===== API ФУНКЦИИ =====
 class BookingAPI {
     /**
@@ -958,14 +1151,20 @@ async function confirmBooking() {
         
         if (result.success) {
             tg.showAlert('Запись успешно создана!');
-            
+
+            // 🗑️ CACHE: Инвалидируем кеш после создания бронирования
+            console.log('🗑️ Инвалидация кеша после создания бронирования...');
+            CacheManager.clear(`bookings_${USER.id}`); // Список бронирований изменился
+            CacheManager.clearPattern('dates_'); // Доступные даты могли измениться
+            CacheManager.clearPattern('slots_'); // Слоты изменились
+
             // 🔧 ИСПРАВЛЕНИЕ 9: Очищаем состояние после успешной записи
             State.selectedService = null;
             State.selectedDate = null;
             State.selectedSlot = null;
             State.availableDates = [];
             State.availableSlots = [];
-            
+
             switchTab('mybookings');
         }
     } catch (error) {
@@ -993,31 +1192,85 @@ async function loadServices() {
 }
 
 async function loadAvailableDates(serviceName) {
+    // 📦 CACHE: Ключ кеша для дат услуги
+    const cacheKey = `dates_${serviceName}`;
+    const CACHE_TTL = 10 * 60 * 1000; // 10 минут
+
+    // 📦 CACHE: Проверяем кеш перед загрузкой
+    const cached = CacheManager.get(cacheKey);
+
+    if (cached && !cached.isExpired) {
+        // ✅ Кеш свежий - показываем мгновенно
+        console.log(`📦 Загружены даты из кеша для ${serviceName} (свежие)`);
+        State.availableDates = cached.data;
+        renderCalendarDays(); // Сразу отрисовываем календарь
+
+        // 🔄 В фоне обновляем данные от Make.com (stale-while-revalidate)
+        console.log(`🔄 Обновление дат для ${serviceName} в фоне...`);
+        loadAvailableDatesFromAPI(serviceName, cacheKey, CACHE_TTL, true);
+        return;
+    }
+
+    if (cached && cached.isExpired) {
+        // ⏰ Кеш устарел - показываем старые данные
+        console.log(`📦 Загружены даты из кеша для ${serviceName} (устаревшие) - обновление...`);
+        State.availableDates = cached.data;
+        renderCalendarDays(); // Показываем старые данные
+    }
+
+    // 🌐 Загружаем свежие данные от Make.com
+    await loadAvailableDatesFromAPI(serviceName, cacheKey, CACHE_TTL, false);
+}
+
+/**
+ * Вспомогательная функция для загрузки доступных дат от API
+ * @param {string} serviceName - Название услуги
+ * @param {string} cacheKey - Ключ для сохранения в кеш
+ * @param {number} cacheTTL - Время жизни кеша
+ * @param {boolean} isBackground - Фоновая загрузка
+ */
+async function loadAvailableDatesFromAPI(serviceName, cacheKey, cacheTTL, isBackground = false) {
     try {
         const result = await BookingAPI.getAvailableDates(serviceName);
-        console.log('📥 RAW ответ от Make:', result);
+        console.log(isBackground ? '🔄 Фоновое обновление дат:' : '📥 RAW ответ от Make:', result);
         console.log('📥 Массив дат от Make:', result.dates);
 
         // ✅ ИСПРАВЛЕНИЕ: преобразуем строки в объекты
-        State.availableDates = (result.dates || []).map(dateStr => ({
+        const dates = (result.dates || []).map(dateStr => ({
             date: dateStr,      // "28.01.2026"
             slots_count: 1      // Всегда доступна
         }));
 
+        // Сохраняем в state
+        State.availableDates = dates;
+
+        // 📦 CACHE: Сохраняем в кеш
+        CacheManager.set(cacheKey, dates, cacheTTL);
+
         console.log('✅ Обработанные даты (State.availableDates):', State.availableDates);
         console.log('🎯 Set для календаря:', Array.from(new Set(State.availableDates.map(d => d.date))));
 
+        // Обновляем календарь
+        renderCalendarDays();
+
     } catch (error) {
         // 🔧 HOTFIX: НЕ пробрасываем ошибку - она уже обработана в handleNetworkError
-        // (показан popup или логирован warning если popup был уже открыт)
         console.error('❌ Ошибка загрузки дат:', {
             name: error?.name,
             message: error?.message,
             isCancelled: error?.isCancelled
         });
 
-        // Устанавливаем пустой массив дат при ошибке
-        State.availableDates = [];
+        // 📦 CACHE: При ошибке пытаемся показать старые данные из кеша
+        const cached = CacheManager.get(cacheKey);
+        if (cached) {
+            console.log('📦 Показываем старые даты из кеша при ошибке');
+            State.availableDates = cached.data;
+            renderCalendarDays();
+        } else {
+            // Кеша нет - показываем пустой массив
+            State.availableDates = [];
+        }
 
         // НЕ пробрасываем ошибку - иначе получим unhandled rejection
         // Popup уже показан пользователю в handleNetworkError
@@ -1025,20 +1278,59 @@ async function loadAvailableDates(serviceName) {
 }
 
 async function loadAvailableSlots(serviceName, date) {
+    // 📦 CACHE: Ключ кеша для слотов услуги и даты
+    const cacheKey = `slots_${serviceName}_${date}`;
+    const CACHE_TTL = 10 * 60 * 1000; // 10 минут
+
+    // 📦 CACHE: Проверяем кеш перед загрузкой
+    const cached = CacheManager.get(cacheKey);
+
+    if (cached && !cached.isExpired) {
+        // ✅ Кеш свежий - показываем мгновенно
+        console.log(`📦 Загружены слоты из кеша для ${serviceName}/${date} (свежие)`);
+        State.availableSlots = cached.data;
+        renderTimeSlots(); // Сразу отрисовываем слоты
+
+        // 🔄 В фоне обновляем данные от Make.com (stale-while-revalidate)
+        console.log(`🔄 Обновление слотов для ${serviceName}/${date} в фоне...`);
+        loadAvailableSlotsFromAPI(serviceName, date, cacheKey, CACHE_TTL, true);
+        return;
+    }
+
+    if (cached && cached.isExpired) {
+        // ⏰ Кеш устарел - показываем старые данные
+        console.log(`📦 Загружены слоты из кеша для ${serviceName}/${date} (устаревшие) - обновление...`);
+        State.availableSlots = cached.data;
+        renderTimeSlots(); // Показываем старые данные
+    }
+
+    // 🌐 Загружаем свежие данные от Make.com
+    await loadAvailableSlotsFromAPI(serviceName, date, cacheKey, CACHE_TTL, false);
+}
+
+/**
+ * Вспомогательная функция для загрузки доступных слотов от API
+ * @param {string} serviceName - Название услуги
+ * @param {string} date - Дата в формате DD.MM.YYYY
+ * @param {string} cacheKey - Ключ для сохранения в кеш
+ * @param {number} cacheTTL - Время жизни кеша
+ * @param {boolean} isBackground - Фоновая загрузка
+ */
+async function loadAvailableSlotsFromAPI(serviceName, date, cacheKey, cacheTTL, isBackground = false) {
     try {
         const result = await BookingAPI.getAvailableSlots(serviceName, date);
-        console.log('📥 RAW slots от Make:', result.slots);
-        
+        console.log(isBackground ? '🔄 Фоновое обновление слотов:' : '📥 RAW slots от Make:', result.slots);
+
         // ✅ Make возвращает {array: [...], __IMTAGGLENGTH__: N}
         // Берём массив из .array
         let slotsArray = [];
-        
+
         if (Array.isArray(result.slots)) {
             slotsArray = result.slots;
         } else if (result.slots && Array.isArray(result.slots.array)) {
             slotsArray = result.slots.array;
         }
-        
+
         // Преобразуем {"0":"id", "1":"date", "2":"time"} → {id, date, time}
         const allSlots = slotsArray
             .map(slot => ({
@@ -1047,19 +1339,40 @@ async function loadAvailableSlots(serviceName, date) {
                 time: slot["2"] || slot[2]
             }))
             .filter(s => s.time && s.date);
-        
+
         console.log('✅ Обработанные слоты:', allSlots);
-        
+
         // ✅ ФИЛЬТРУЕМ только слоты для выбранной даты
-        State.availableSlots = allSlots.filter(slot => slot.date === date);
-        
+        const filteredSlots = allSlots.filter(slot => slot.date === date);
+
+        // Сохраняем в state
+        State.availableSlots = filteredSlots;
+
+        // 📦 CACHE: Сохраняем в кеш
+        CacheManager.set(cacheKey, filteredSlots, cacheTTL);
+
         console.log(`🎯 Слоты для даты ${date}:`, State.availableSlots);
+
+        // Обновляем UI
+        renderTimeSlots();
+
     } catch (error) {
         console.error('❌ Ошибка загрузки слотов:', error);
-        State.availableSlots = [];
-        if (tg.HapticFeedback) {
-            tg.HapticFeedback.notificationOccurred('error');
+
+        // 📦 CACHE: При ошибке пытаемся показать старые данные из кеша
+        const cached = CacheManager.get(cacheKey);
+        if (cached) {
+            console.log('📦 Показываем старые слоты из кеша при ошибке');
+            State.availableSlots = cached.data;
+            renderTimeSlots();
+        } else {
+            // Кеша нет - показываем пустой массив
+            State.availableSlots = [];
+            if (tg.HapticFeedback) {
+                tg.HapticFeedback.notificationOccurred('error');
+            }
         }
+
         // 🔧 ИСПРАВЛЕНИЕ 11: Пробрасываем ошибку дальше
         throw error;
     }
@@ -1073,35 +1386,98 @@ async function loadUserBookings() {
         console.log('⏸️ Приложение неактивно - отмена загрузки записей');
         return;
     }
-    
+
+    // 📦 CACHE: Ключ кеша для бронирований пользователя
+    const cacheKey = `bookings_${USER.id}`;
+    const CACHE_TTL = 5 * 60 * 1000; // 5 минут
+
+    // 📦 CACHE: Проверяем кеш перед загрузкой
+    const cached = CacheManager.get(cacheKey);
+
+    if (cached && !cached.isExpired) {
+        // ✅ Кеш свежий - показываем мгновенно
+        console.log('📦 Загружены бронирования из кеша (свежие)');
+        State.userBookings = cached.data;
+        renderMyBookings(); // Сразу отрисовываем
+
+        // 🔄 В фоне обновляем данные от Make.com (stale-while-revalidate)
+        console.log('🔄 Обновление бронирований в фоне...');
+        loadUserBookingsFromAPI(cacheKey, CACHE_TTL, true); // background = true
+        return;
+    }
+
+    if (cached && cached.isExpired) {
+        // ⏰ Кеш устарел - показываем старые данные, но с индикатором загрузки
+        console.log('📦 Загружены бронирования из кеша (устаревшие) - обновление...');
+        State.userBookings = cached.data;
+        renderMyBookings(); // Показываем старые данные
+    }
+
+    // 🌐 Загружаем свежие данные от Make.com
     showLoader();
+    await loadUserBookingsFromAPI(cacheKey, CACHE_TTL, false);
+}
+
+/**
+ * Вспомогательная функция для загрузки бронирований от API
+ * @param {string} cacheKey - Ключ для сохранения в кеш
+ * @param {number} cacheTTL - Время жизни кеша
+ * @param {boolean} isBackground - Фоновая загрузка (без loader)
+ */
+async function loadUserBookingsFromAPI(cacheKey, cacheTTL, isBackground = false) {
     try {
         const result = await BookingAPI.getUserBookings();
-        console.log('📥 Бронирования пользователя:', result);
-        
+        console.log(isBackground ? '🔄 Фоновое обновление бронирований:' : '📥 Бронирования пользователя:', result);
+
+        let bookings = [];
         if (result.bookings && result.bookings.array) {
             // Обрабатываем массив бронирований
-            State.userBookings = result.bookings.array.map(booking => ({
+            bookings = result.bookings.array.map(booking => ({
                 id: booking["0"] || booking.id,
                 date: booking["1"] || booking.date,
                 time: booking["2"] || booking.start_time,
                 service: booking["5"] || booking.service,
                 zoom_link: booking["12"] || booking.zoom_link
             })).filter(b => b.id && b.date && b.time);  // Фильтруем пустые
-        } else {
-            State.userBookings = [];
         }
-        
+
+        // Сохраняем в state
+        State.userBookings = bookings;
+
+        // 📦 CACHE: Сохраняем в кеш
+        CacheManager.set(cacheKey, bookings, cacheTTL);
+
         console.log('✅ Обработанные бронирования:', State.userBookings);
-        hideLoader();
+
+        // Обновляем UI если это не фоновая загрузка
+        if (!isBackground) {
+            hideLoader();
+            renderMyBookings();
+        } else {
+            // При фоновой загрузке просто обновляем UI без loader
+            renderMyBookings();
+        }
     } catch (error) {
         // 🔧 HOTFIX: НЕ пробрасываем ошибку и НЕ показываем дублирующий alert
         // Ошибка уже обработана в handleNetworkError (показан popup)
         console.error('❌ Ошибка загрузки бронирований:', error);
 
-        // Устанавливаем пустой массив бронирований при ошибке
-        State.userBookings = [];
-        hideLoader();
+        // 📦 CACHE: При ошибке пытаемся показать старые данные из кеша
+        const cached = CacheManager.get(cacheKey);
+        if (cached) {
+            console.log('📦 Показываем старые данные из кеша при ошибке');
+            State.userBookings = cached.data;
+            if (!isBackground) {
+                hideLoader();
+            }
+            renderMyBookings();
+        } else {
+            // Кеша нет - показываем пустой массив
+            State.userBookings = [];
+            if (!isBackground) {
+                hideLoader();
+            }
+        }
 
         // НЕ показываем дублирующий alert - popup уже показан в handleNetworkError
         // НЕ пробрасываем ошибку - иначе получим unhandled rejection
@@ -1121,6 +1497,13 @@ async function cancelBooking(slotId) {
         
         if (result.success) {
             tg.showAlert('Запись отменена');
+
+            // 🗑️ CACHE: Инвалидируем кеш после отмены бронирования
+            console.log('🗑️ Инвалидация кеша после отмены бронирования...');
+            CacheManager.clear(`bookings_${USER.id}`); // Список бронирований изменился
+            CacheManager.clearPattern('dates_'); // Доступные даты могли измениться
+            CacheManager.clearPattern('slots_'); // Слоты изменились
+
             await loadUserBookings();
             renderMyBookingsScreen();
         }
