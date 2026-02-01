@@ -1274,11 +1274,17 @@ async function loadAvailableDatesFromAPI(serviceName, cacheKey, cacheTTL, isBack
             slots_count: 1      // Всегда доступна
         }));
 
+        // 📦 CACHE: Сохраняем в кеш (всегда, даже если услуга уже сменилась)
+        CacheManager.set(cacheKey, dates, cacheTTL);
+
+        // 🔧 HOTFIX v17: Проверяем что услуга не сменилась во время запроса
+        if (State.selectedService !== serviceName) {
+            console.log(`⏭️ Пропускаем обновление дат: услуга изменилась с ${serviceName} на ${State.selectedService}`);
+            return;
+        }
+
         // Сохраняем в state
         State.availableDates = dates;
-
-        // 📦 CACHE: Сохраняем в кеш
-        CacheManager.set(cacheKey, dates, cacheTTL);
 
         console.log('✅ Обработанные даты (State.availableDates):', State.availableDates);
         console.log('🎯 Set для календаря:', Array.from(new Set(State.availableDates.map(d => d.date))));
@@ -1293,6 +1299,12 @@ async function loadAvailableDatesFromAPI(serviceName, cacheKey, cacheTTL, isBack
             message: error?.message,
             isCancelled: error?.isCancelled
         });
+
+        // 🔧 HOTFIX v17: Проверяем что услуга не сменилась во время запроса
+        if (State.selectedService !== serviceName) {
+            console.log(`⏭️ Пропускаем обработку ошибки дат: услуга изменилась с ${serviceName} на ${State.selectedService}`);
+            return; // Не обновляем State - это старый запрос
+        }
 
         // 📦 CACHE: При ошибке пытаемся показать старые данные из кеша
         const cached = CacheManager.get(cacheKey);
@@ -1379,18 +1391,35 @@ async function loadAvailableSlotsFromAPI(serviceName, date, cacheKey, cacheTTL, 
         // ✅ ФИЛЬТРУЕМ только слоты для выбранной даты
         const filteredSlots = allSlots.filter(slot => slot.date === date);
 
+        // 📦 CACHE: Сохраняем в кеш (всегда, даже если дата уже сменилась)
+        CacheManager.set(cacheKey, filteredSlots, cacheTTL);
+
+        // 🔧 HOTFIX v17: Проверяем что дата не сменилась во время запроса
+        // Если пользователь уже выбрал другую дату - не обновляем State
+        if (State.selectedDate !== date) {
+            console.log(`⏭️ Пропускаем обновление слотов: дата изменилась с ${date} на ${State.selectedDate}`);
+            return;
+        }
+
         // Сохраняем в state
         State.availableSlots = filteredSlots;
-
-        // 📦 CACHE: Сохраняем в кеш
-        CacheManager.set(cacheKey, filteredSlots, cacheTTL);
 
         console.log(`🎯 Слоты для даты ${date}:`, State.availableSlots);
 
         // UI обновится через renderBookingScreen() в selectDate()
 
     } catch (error) {
-        console.error('❌ Ошибка загрузки слотов:', error);
+        console.error('❌ Ошибка загрузки слотов:', {
+            name: error?.name,
+            isCancelled: error?.isCancelled
+        });
+
+        // 🔧 HOTFIX v17: Проверяем что дата не сменилась во время запроса
+        // Если пользователь уже выбрал другую дату - не обновляем State
+        if (State.selectedDate !== date) {
+            console.log(`⏭️ Пропускаем обработку ошибки: дата изменилась с ${date} на ${State.selectedDate}`);
+            return; // Не обновляем State и не показываем ошибку - это старый запрос
+        }
 
         // 📦 CACHE: При ошибке пытаемся показать старые данные из кеша
         const cached = CacheManager.get(cacheKey);
