@@ -886,6 +886,8 @@ function renderPaymentScreen() {
 
 // Экран бронирования
 function renderBookingScreen() {
+    console.log(`🎨 renderBookingScreen: service=${State.selectedService}, date=${State.selectedDate}, slots=${State.availableSlots?.length || 0}, dates=${State.availableDates?.length || 0}`);
+
     const services = State.services.filter(s => !s.type || s.type !== 'info_button');
     
     const html = `
@@ -1000,6 +1002,8 @@ function renderMyBookingsScreen() {
 // ===== КАЛЕНДАРЬ =====
 
 function renderCalendarDays() {
+    console.log(`📅 renderCalendarDays: availableDates=${State.availableDates?.length || 0}, selectedDate=${State.selectedDate}`);
+
     const year = State.currentMonth.getFullYear();
     const month = State.currentMonth.getMonth();
     
@@ -1098,7 +1102,10 @@ async function onServiceSelect(serviceName) {
     State.selectedDate = null;
     State.selectedSlot = null;
     State.availableSlots = [];
+    State.availableDates = []; // 🔧 HOTFIX v19: Очищаем даты при смене услуги
     State.currentMonth = new Date();
+
+    console.log(`🔄 onServiceSelect: выбрана услуга "${serviceName}", state очищен`);
 
     renderBookingScreen();
 
