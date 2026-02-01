@@ -1494,7 +1494,7 @@ async function loadUserBookings() {
         // ✅ Кеш свежий - показываем мгновенно
         console.log('📦 Загружены бронирования из кеша (свежие)');
         State.userBookings = cached.data;
-        renderMyBookings(); // Сразу отрисовываем
+        renderMyBookingsScreen(); // Сразу отрисовываем
 
         // 🔄 В фоне обновляем данные от Make.com (stale-while-revalidate)
         console.log('🔄 Обновление бронирований в фоне...');
@@ -1506,7 +1506,7 @@ async function loadUserBookings() {
         // ⏰ Кеш устарел - показываем старые данные, но с индикатором загрузки
         console.log('📦 Загружены бронирования из кеша (устаревшие) - обновление...');
         State.userBookings = cached.data;
-        renderMyBookings(); // Показываем старые данные
+        renderMyBookingsScreen(); // Показываем старые данные
     }
 
     // 🌐 Загружаем свежие данные от Make.com
@@ -1548,10 +1548,10 @@ async function loadUserBookingsFromAPI(cacheKey, cacheTTL, isBackground = false)
         // Обновляем UI если это не фоновая загрузка
         if (!isBackground) {
             hideLoader();
-            renderMyBookings();
+            renderMyBookingsScreen();
         } else {
             // При фоновой загрузке просто обновляем UI без loader
-            renderMyBookings();
+            renderMyBookingsScreen();
         }
     } catch (error) {
         // 🔧 HOTFIX: НЕ пробрасываем ошибку и НЕ показываем дублирующий alert
@@ -1566,7 +1566,7 @@ async function loadUserBookingsFromAPI(cacheKey, cacheTTL, isBackground = false)
             if (!isBackground) {
                 hideLoader();
             }
-            renderMyBookings();
+            renderMyBookingsScreen();
         } else {
             // Кеша нет - показываем пустой массив
             State.userBookings = [];

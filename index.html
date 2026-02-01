@@ -347,11 +347,11 @@ Telegram User ID: ${window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 'unknow
 
     <!-- Основные скрипты приложения -->
     <script src="config.js?v=16"></script>
-    <script src="app.js?v=20"></script>
+    <script src="app.js?v=21"></script>
 
     <!-- 📝 Логирование для проверки загрузки -->
     <script>
-        console.log('✅ index.html loaded - version 20.0 - [T-001] HOTFIX: Loading indicator для слотов без кеша + debounce выбора даты');
+        console.log('✅ index.html loaded - version 21.0 - [T-001] HOTFIX: renderMyBookings -> renderMyBookingsScreen (критический баг)');
         console.log('📦 Files loaded:', {
             telegram: !!window.Telegram,
             config: !!window.CONFIG,
