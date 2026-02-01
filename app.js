@@ -55,6 +55,8 @@ const State = {
     currentMonth: new Date(),
     isLoading: false,
     isLoadingSlots: false,  // 🔧 HOTFIX v20: Флаг загрузки слотов (для отображения loading в секции слотов)
+    isLoadingDates: false,  // 🔧 HOTFIX v22: Флаг загрузки дат (для отображения loading в календаре)
+    isLoadingBookings: false,  // 🔧 HOTFIX v22: Флаг загрузки записей (для отображения loading в "Мои записи")
     userBookings: [],
     requestControllers: {},  // Для отмены запросов по context (исправление race condition)
     bookingsLoadTimeout: null,  // Для debounce загрузки записей
@@ -922,7 +924,12 @@ function renderBookingScreen() {
                         ).join('')}
                     </div>
                     <div class="calendar-grid">
-                        ${renderCalendarDays()}
+                        ${State.isLoadingDates && State.availableDates.length === 0 ? `
+                            <div class="dates-loading">
+                                <div class="dates-spinner"></div>
+                                <span>Загрузка дат...</span>
+                            </div>
+                        ` : renderCalendarDays()}
                     </div>
                 </div>
             ` : ''}
@@ -995,6 +1002,11 @@ function renderMyBookingsScreen() {
                         </div>
                     </div>
                 `).join('')}
+            </div>
+        ` : State.isLoadingBookings ? `
+            <div class="bookings-loading">
+                <div class="bookings-spinner"></div>
+                <span>Загрузка записей...</span>
             </div>
         ` : `
             <div class="loader-container">
@@ -1290,7 +1302,12 @@ async function loadAvailableDates(serviceName) {
         // ⏰ Кеш устарел - показываем старые данные
         console.log(`📦 Загружены даты из кеша для ${serviceName} (устаревшие) - обновление...`);
         State.availableDates = cached.data;
+        State.isLoadingDates = false;  // 🔧 HOTFIX v22: Есть данные из кеша - не показываем loading
         renderCalendarDays(); // Показываем старые данные
+    } else if (!cached) {
+        // 🔧 HOTFIX v22: Кеша нет - показываем loading
+        State.isLoadingDates = true;
+        console.log(`⏳ [loadAvailableDates] Нет кеша для ${serviceName} - показываем loading`);
     }
 
     // 🌐 Загружаем свежие данные от Make.com
@@ -1328,6 +1345,7 @@ async function loadAvailableDatesFromAPI(serviceName, cacheKey, cacheTTL, isBack
 
         // Сохраняем в state
         State.availableDates = dates;
+        State.isLoadingDates = false;  // 🔧 HOTFIX v22: Сбрасываем флаг загрузки
 
         console.log('✅ Обработанные даты (State.availableDates):', State.availableDates);
         console.log('🎯 Set для календаря:', Array.from(new Set(State.availableDates.map(d => d.date))));
@@ -1349,6 +1367,9 @@ async function loadAvailableDatesFromAPI(serviceName, cacheKey, cacheTTL, isBack
             return; // Не обновляем State - это старый запрос
         }
 
+        // 🔧 HOTFIX v22: Сбрасываем флаг загрузки при ошибке
+        State.isLoadingDates = false;
+
         // 📦 CACHE: При ошибке пытаемся показать старые данные из кеша
         const cached = CacheManager.get(cacheKey);
         if (cached) {
@@ -1358,6 +1379,7 @@ async function loadAvailableDatesFromAPI(serviceName, cacheKey, cacheTTL, isBack
         } else {
             // Кеша нет - показываем пустой массив
             State.availableDates = [];
+            renderCalendarDays();  // 🔧 HOTFIX v22: Рендерим календарь чтобы убрать спиннер
         }
 
         // НЕ пробрасываем ошибку - иначе получим unhandled rejection
@@ -1506,7 +1528,13 @@ async function loadUserBookings() {
         // ⏰ Кеш устарел - показываем старые данные, но с индикатором загрузки
         console.log('📦 Загружены бронирования из кеша (устаревшие) - обновление...');
         State.userBookings = cached.data;
+        State.isLoadingBookings = false;  // 🔧 HOTFIX v22: Есть данные из кеша - не показываем loading
         renderMyBookingsScreen(); // Показываем старые данные
+    } else if (!cached) {
+        // 🔧 HOTFIX v22: Кеша нет - показываем loading
+        State.isLoadingBookings = true;
+        console.log(`⏳ [loadUserBookings] Нет кеша - показываем loading`);
+        renderMyBookingsScreen();  // Рендерим сразу чтобы показать спиннер
     }
 
     // 🌐 Загружаем свежие данные от Make.com
@@ -1539,6 +1567,7 @@ async function loadUserBookingsFromAPI(cacheKey, cacheTTL, isBackground = false)
 
         // Сохраняем в state
         State.userBookings = bookings;
+        State.isLoadingBookings = false;  // 🔧 HOTFIX v22: Сбрасываем флаг загрузки
 
         // 📦 CACHE: Сохраняем в кеш
         CacheManager.set(cacheKey, bookings, cacheTTL);
@@ -1558,6 +1587,9 @@ async function loadUserBookingsFromAPI(cacheKey, cacheTTL, isBackground = false)
         // Ошибка уже обработана в handleNetworkError (показан popup)
         console.error('❌ Ошибка загрузки бронирований:', error);
 
+        // 🔧 HOTFIX v22: Сбрасываем флаг загрузки при ошибке
+        State.isLoadingBookings = false;
+
         // 📦 CACHE: При ошибке пытаемся показать старые данные из кеша
         const cached = CacheManager.get(cacheKey);
         if (cached) {
@@ -1573,6 +1605,7 @@ async function loadUserBookingsFromAPI(cacheKey, cacheTTL, isBackground = false)
             if (!isBackground) {
                 hideLoader();
             }
+            renderMyBookingsScreen();  // 🔧 HOTFIX v22: Рендерим чтобы убрать спиннер
         }
 
         // НЕ показываем дублирующий alert - popup уже показан в handleNetworkError
