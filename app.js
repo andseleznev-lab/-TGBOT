@@ -1332,9 +1332,9 @@ async function loadAvailableSlots(serviceName, date) {
 
     if (cached && !cached.isExpired) {
         // ✅ Кеш свежий - показываем мгновенно
-        console.log(`📦 Загружены слоты из кеша для ${serviceName}/${date} (свежие)`);
+        console.log(`📦 Загружены слоты из кеша для ${serviceName}/${date} (свежие):`, cached.data);
         State.availableSlots = cached.data;
-        // UI обновится через renderBookingScreen() в selectDate()
+        renderBookingScreen(); // 🔧 HOTFIX v18: Мгновенный рендер из кеша
 
         // 🔄 В фоне обновляем данные от Make.com (stale-while-revalidate)
         console.log(`🔄 Обновление слотов для ${serviceName}/${date} в фоне...`);
@@ -1343,10 +1343,10 @@ async function loadAvailableSlots(serviceName, date) {
     }
 
     if (cached && cached.isExpired) {
-        // ⏰ Кеш устарел - показываем старые данные
-        console.log(`📦 Загружены слоты из кеша для ${serviceName}/${date} (устаревшие) - обновление...`);
+        // ⏰ Кеш устарел - показываем старые данные пока грузим новые
+        console.log(`📦 Загружены слоты из кеша для ${serviceName}/${date} (устаревшие):`, cached.data);
         State.availableSlots = cached.data;
-        // UI обновится через renderBookingScreen() в selectDate()
+        renderBookingScreen(); // 🔧 HOTFIX v18: Мгновенный рендер устаревших данных
     }
 
     // 🌐 Загружаем свежие данные от Make.com
@@ -1406,7 +1406,8 @@ async function loadAvailableSlotsFromAPI(serviceName, date, cacheKey, cacheTTL, 
 
         console.log(`🎯 Слоты для даты ${date}:`, State.availableSlots);
 
-        // UI обновится через renderBookingScreen() в selectDate()
+        // 🔧 HOTFIX v18: Обновляем UI сразу после загрузки
+        renderBookingScreen();
 
     } catch (error) {
         console.error('❌ Ошибка загрузки слотов:', {
@@ -1424,9 +1425,9 @@ async function loadAvailableSlotsFromAPI(serviceName, date, cacheKey, cacheTTL, 
         // 📦 CACHE: При ошибке пытаемся показать старые данные из кеша
         const cached = CacheManager.get(cacheKey);
         if (cached) {
-            console.log('📦 Показываем старые слоты из кеша при ошибке');
+            console.log('📦 Показываем старые слоты из кеша при ошибке:', cached.data);
             State.availableSlots = cached.data;
-            // UI обновится через renderBookingScreen() в selectDate()
+            renderBookingScreen(); // 🔧 HOTFIX v18: Обновляем UI при fallback на кеш
         } else {
             // Кеша нет - показываем пустой массив
             State.availableSlots = [];
