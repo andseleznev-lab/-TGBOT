@@ -1116,6 +1116,16 @@ function selectService(serviceName) {
 async function onServiceSelect(serviceName) {
     if (!serviceName) return;
 
+    // 🔧 HOTFIX v24: Отменяем ВСЕ активные запросы при смене услуги
+    // Это предотвращает накопление "мёртвых" запросов к Make.com
+    Object.keys(State.requestControllers).forEach(context => {
+        if (State.requestControllers[context]) {
+            console.log(`🛑 [onServiceSelect] Отменяем активный запрос: ${context}`);
+            State.requestControllers[context].abort();
+            delete State.requestControllers[context];
+        }
+    });
+
     // 🔧 ИСПРАВЛЕНИЕ 6: Очищаем предыдущее состояние
     State.selectedService = serviceName;
     State.selectedDate = null;
