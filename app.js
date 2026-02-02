@@ -602,15 +602,16 @@ async function handleNetworkError(error, context, retryFn = null, config = {}) {
         stack: error.stack
     });
 
-    // 3. Haptic feedback при ошибке
-    if (tg.HapticFeedback) {
-        tg.HapticFeedback.notificationOccurred('error');
-    }
-
-    // 4. Игнорируем AbortError (запрос отменён пользователем или системой)
+    // 🔧 HOTFIX v25: Сначала проверяем ABORT, потом haptic
+    // Игнорируем AbortError (запрос отменён пользователем или системой)
     if (errorInfo.type === 'ABORT') {
         console.log(`[${context}] Request cancelled - не показываем ошибку`);
-        return;
+        return; // Выходим БЕЗ haptic feedback
+    }
+
+    // 3. Haptic feedback при реальной ошибке (не ABORT)
+    if (tg.HapticFeedback) {
+        tg.HapticFeedback.notificationOccurred('error');
     }
 
     // 5. Автоматический retry для retryable запросов (только 1 раз!)
@@ -1498,7 +1499,8 @@ async function loadAvailableSlotsFromAPI(serviceName, date, cacheKey, cacheTTL, 
         } else {
             // Кеша нет - показываем пустой массив
             State.availableSlots = [];
-            if (tg.HapticFeedback) {
+            // 🔧 HOTFIX v25: Не показываем error haptic при отменённых запросах
+            if (tg.HapticFeedback && !error.isCancelled) {
                 tg.HapticFeedback.notificationOccurred('error');
             }
             // Пробрасываем ошибку только если нет кеша
