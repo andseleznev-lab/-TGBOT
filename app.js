@@ -1305,9 +1305,10 @@ async function loadAvailableDates(serviceName) {
         State.isLoadingDates = false;  // 🔧 HOTFIX v22: Есть данные из кеша - не показываем loading
         renderCalendarDays(); // Показываем старые данные
     } else if (!cached) {
-        // 🔧 HOTFIX v22: Кеша нет - показываем loading
+        // 🔧 HOTFIX v23: Кеша нет - показываем loading
         State.isLoadingDates = true;
         console.log(`⏳ [loadAvailableDates] Нет кеша для ${serviceName} - показываем loading`);
+        renderBookingScreen();  // 🔧 HOTFIX v23: Рендерим сразу чтобы показать спиннер "Загрузка дат..."
     }
 
     // 🌐 Загружаем свежие данные от Make.com
