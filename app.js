@@ -1283,6 +1283,247 @@ function openPayment(method) {
 
 // ===== ЗАГРУЗКА ДАННЫХ =====
 
+/**
+ * [T-002] Загружает slots.json из GitHub raw URL с кешированием и fallback
+ * Реализует паттерн "stale-while-revalidate" для оптимальной производительности
+ *
+ * @returns {Promise<Object>} Объект со структурой { slots: [...], generated_at: "..." }
+ * @throws {Error} Если не удалось загрузить данные ни из Git, ни из fallback API
+ *
+ * @example
+ * const slotsData = await fetchSlotsFromGit();
+ * console.log('Загружено слотов:', slotsData.slots.length);
+ */
+async function fetchSlotsFromGit() {
+    const CACHE_KEY = 'slots_json';
+    const CACHE_TTL = 10 * 60 * 1000; // 10 минут
+
+    // Проверяем кеш
+    const cached = CacheManager.get(CACHE_KEY);
+
+    if (cached && !cached.isExpired) {
+        // Кеш свежий - возвращаем мгновенно
+        console.log('📦 [fetchSlotsFromGit] Данные из кеша (свежие)');
+
+        // Фоновое обновление (stale-while-revalidate)
+        fetchSlotsFromGitAPI(CACHE_KEY, CACHE_TTL, true).catch(err => {
+            console.warn('🔄 Фоновое обновление slots.json не удалось:', err.message);
+        });
+
+        return cached.data;
+    }
+
+    if (cached && cached.isExpired) {
+        // Кеш устарел - показываем старые данные, обновляем в фоне
+        console.log('📦 [fetchSlotsFromGit] Данные из кеша (устаревшие) - обновление...');
+    }
+
+    // Загружаем свежие данные
+    return await fetchSlotsFromGitAPI(CACHE_KEY, CACHE_TTL, false);
+}
+
+/**
+ * [T-002] Вспомогательная функция для загрузки slots.json из GitHub или fallback API
+ * @param {string} cacheKey - Ключ кеша
+ * @param {number} cacheTTL - Время жизни кеша в мс
+ * @param {boolean} isBackground - Фоновая загрузка (без ошибок пользователю)
+ * @returns {Promise<Object>} Объект со слотами
+ */
+async function fetchSlotsFromGitAPI(cacheKey, cacheTTL, isBackground = false) {
+    try {
+        // Пытаемся загрузить из GitHub
+        console.log('🌐 [fetchSlotsFromGit] Загрузка из GitHub:', CONFIG.SLOTS_JSON_URL);
+
+        const response = await fetch(CONFIG.SLOTS_JSON_URL, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json'
+            },
+            signal: AbortSignal.timeout(5000) // 5 секунд timeout
+        });
+
+        if (!response.ok) {
+            throw new Error(`GitHub HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        // Валидация структуры
+        if (!data.slots || !Array.isArray(data.slots)) {
+            throw new Error('Invalid slots.json structure: missing slots array');
+        }
+
+        if (!data.generated_at) {
+            console.warn('⚠️ slots.json не содержит generated_at');
+        }
+
+        console.log(`✅ [fetchSlotsFromGit] Загружено ${data.slots.length} слотов из GitHub`);
+
+        // Сохраняем в кеш
+        CacheManager.set(cacheKey, data, cacheTTL);
+
+        return data;
+
+    } catch (error) {
+        console.error('❌ [fetchSlotsFromGit] Ошибка загрузки из GitHub:', error.message);
+
+        // Fallback на старый Make.com API
+        if (CONFIG.SLOTS_JSON_FALLBACK) {
+            console.log('🔄 [fetchSlotsFromGit] Fallback на Make.com API...');
+
+            try {
+                // Используем старый API для получения дат и слотов
+                // В рамках Этапа 1 просто логируем - реальный fallback будет в Этапе 3
+                console.warn('⚠️ [fetchSlotsFromGit] Fallback на Make.com API пока не реализован');
+
+                // Пока пробрасываем ошибку
+                throw error;
+
+            } catch (fallbackError) {
+                console.error('❌ [fetchSlotsFromGit] Fallback также не удался:', fallbackError.message);
+
+                // Пытаемся использовать устаревший кеш
+                const cached = CacheManager.get(cacheKey);
+                if (cached) {
+                    console.log('📦 [fetchSlotsFromGit] Используем устаревший кеш при ошибке');
+                    return cached.data;
+                }
+
+                // Нет ни свежих данных, ни кеша
+                if (!isBackground) {
+                    throw new Error('Не удалось загрузить расписание');
+                } else {
+                    // Фоновая загрузка - не бросаем ошибку
+                    return null;
+                }
+            }
+        } else {
+            // Fallback отключён
+            throw error;
+        }
+    }
+}
+
+/**
+ * [T-002] Фильтрует массив слотов по типу услуги
+ *
+ * @param {Array} slots - Массив всех слотов из slots.json
+ * @param {string} serviceId - ID услуги ('package', 'single', 'family', 'diagnosis')
+ * @returns {Array} Отфильтрованные слоты для указанной услуги
+ *
+ * @example
+ * const allSlots = await fetchSlotsFromGit();
+ * const packageSlots = filterSlotsByService(allSlots.slots, 'package');
+ * console.log('Слотов для пакета:', packageSlots.length);
+ */
+function filterSlotsByService(slots, serviceId) {
+    if (!Array.isArray(slots)) {
+        console.error('❌ [filterSlotsByService] slots не является массивом:', slots);
+        return [];
+    }
+
+    if (!serviceId) {
+        console.warn('⚠️ [filterSlotsByService] serviceId не указан');
+        return [];
+    }
+
+    const filtered = slots.filter(slot => slot.service === serviceId);
+
+    console.log(`🔍 [filterSlotsByService] Отфильтровано ${filtered.length} слотов для услуги "${serviceId}"`);
+
+    return filtered;
+}
+
+/**
+ * [T-002] Извлекает уникальные доступные даты из массива слотов (только free слоты)
+ *
+ * @param {Array} slots - Массив слотов для конкретной услуги
+ * @returns {Array<Object>} Массив объектов с датами в формате { date: 'DD.MM.YYYY', slots_count: N }
+ *
+ * @example
+ * const slots = filterSlotsByService(allSlots.slots, 'single');
+ * const availableDates = getAvailableDatesFromSlots(slots);
+ * // [{ date: '03.02.2026', slots_count: 3 }, { date: '05.02.2026', slots_count: 2 }, ...]
+ */
+function getAvailableDatesFromSlots(slots) {
+    if (!Array.isArray(slots)) {
+        console.error('❌ [getAvailableDatesFromSlots] slots не является массивом:', slots);
+        return [];
+    }
+
+    // Фильтруем только free слоты
+    const freeSlots = slots.filter(slot => slot.status === 'free');
+
+    // Группируем по датам и считаем количество
+    const dateMap = {};
+    freeSlots.forEach(slot => {
+        if (slot.date) {
+            dateMap[slot.date] = (dateMap[slot.date] || 0) + 1;
+        }
+    });
+
+    // Преобразуем в массив объектов
+    const dates = Object.entries(dateMap).map(([date, count]) => ({
+        date: date,
+        slots_count: count
+    }));
+
+    // Сортируем по дате
+    dates.sort((a, b) => {
+        // Предполагаем формат DD.MM.YYYY
+        const [dayA, monthA, yearA] = a.date.split('.');
+        const [dayB, monthB, yearB] = b.date.split('.');
+        const dateA = new Date(yearA, monthA - 1, dayA);
+        const dateB = new Date(yearB, monthB - 1, dayB);
+        return dateA - dateB;
+    });
+
+    console.log(`📅 [getAvailableDatesFromSlots] Найдено ${dates.length} уникальных дат со свободными слотами`);
+
+    return dates;
+}
+
+/**
+ * [T-002] Получает доступные слоты для конкретной даты
+ *
+ * @param {Array} slots - Массив слотов для конкретной услуги
+ * @param {string} date - Дата в формате 'DD.MM.YYYY'
+ * @returns {Array} Массив слотов для указанной даты со статусом 'free', отсортированный по времени
+ *
+ * @example
+ * const slots = filterSlotsByService(allSlots.slots, 'diagnosis');
+ * const slotsFor03Feb = getAvailableSlotsForDate(slots, '03.02.2026');
+ * // [{ id: 'dslot_19', time: '13:00', date: '03.02.2026', ... }, { id: 'dslot_20', time: '14:00', ... }]
+ */
+function getAvailableSlotsForDate(slots, date) {
+    if (!Array.isArray(slots)) {
+        console.error('❌ [getAvailableSlotsForDate] slots не является массивом:', slots);
+        return [];
+    }
+
+    if (!date) {
+        console.warn('⚠️ [getAvailableSlotsForDate] date не указана');
+        return [];
+    }
+
+    // Фильтруем слоты: date === указанная && status === 'free'
+    const filtered = slots.filter(slot =>
+        slot.date === date && slot.status === 'free'
+    );
+
+    // Сортируем по времени
+    filtered.sort((a, b) => {
+        // Предполагаем формат HH:MM
+        const [hourA, minA] = (a.time || '00:00').split(':').map(Number);
+        const [hourB, minB] = (b.time || '00:00').split(':').map(Number);
+        return (hourA * 60 + minA) - (hourB * 60 + minB);
+    });
+
+    console.log(`🕐 [getAvailableSlotsForDate] Найдено ${filtered.length} свободных слотов для даты ${date}`);
+
+    return filtered;
+}
+
 async function loadServices() {
     // Используем статичные данные из CONFIG вместо запроса к Make
     State.services = CONFIG.SERVICES;

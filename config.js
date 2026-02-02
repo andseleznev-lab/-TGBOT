@@ -6,6 +6,12 @@ const CONFIG = {
         main: 'https://hook.eu2.make.com/r61db3c6xvtw765yx3hy8629561k23ba',
         timeout: 10000  // 10 секунд timeout для всех API запросов
     },
+
+    // [T-002] URL для slots.json из Git (статический файл)
+    SLOTS_JSON_URL: 'https://raw.githubusercontent.com/andseleznev-lab/-TGBOT/main/slots.json',
+
+    // [T-002] Fallback на старый Make.com API если slots.json недоступен
+    SLOTS_JSON_FALLBACK: true,
     
     // Статичный список услуг (не загружаем из Make)
     SERVICES: [
