@@ -1253,6 +1253,7 @@ async function confirmBooking() {
             // 🗑️ CACHE: Инвалидируем кеш после создания бронирования
             console.log('🗑️ Инвалидация кеша после создания бронирования...');
             CacheManager.clear(`bookings_${USER.id}`); // Список бронирований изменился
+            CacheManager.clear('slots_json'); // [T-002] Инвалидация slots.json
             CacheManager.clearPattern('dates_'); // Доступные даты могли измениться
             CacheManager.clearPattern('slots_'); // Слоты изменились
 
@@ -1568,7 +1569,7 @@ async function loadAvailableDates(serviceName) {
 }
 
 /**
- * Вспомогательная функция для загрузки доступных дат от API
+ * [T-002] Вспомогательная функция для загрузки доступных дат из slots.json
  * @param {string} serviceName - Название услуги
  * @param {string} cacheKey - Ключ для сохранения в кеш
  * @param {number} cacheTTL - Время жизни кеша
@@ -1576,16 +1577,20 @@ async function loadAvailableDates(serviceName) {
  */
 async function loadAvailableDatesFromAPI(serviceName, cacheKey, cacheTTL, isBackground = false) {
     try {
-        // 🔧 HOTFIX v16: Фоновые запросы не показывают popup при ошибке
-        const result = await BookingAPI.getAvailableDates(serviceName, { showError: !isBackground });
-        console.log(isBackground ? '🔄 Фоновое обновление дат:' : '📥 RAW ответ от Make:', result);
-        console.log('📥 Массив дат от Make:', result.dates);
+        // [T-002] Загружаем все слоты из Git
+        const slotsData = await fetchSlotsFromGit();
 
-        // ✅ ИСПРАВЛЕНИЕ: преобразуем строки в объекты
-        const dates = (result.dates || []).map(dateStr => ({
-            date: dateStr,      // "28.01.2026"
-            slots_count: 1      // Всегда доступна
-        }));
+        if (!slotsData) {
+            throw new Error('Не удалось загрузить slots.json');
+        }
+
+        console.log(isBackground ? '🔄 Фоновое обновление дат из slots.json' : '📥 Данные из slots.json загружены');
+
+        // [T-002] Фильтруем слоты по услуге
+        const serviceSlots = filterSlotsByService(slotsData.slots, serviceName);
+
+        // [T-002] Извлекаем доступные даты
+        const dates = getAvailableDatesFromSlots(serviceSlots);
 
         // 📦 CACHE: Сохраняем в кеш (всегда, даже если услуга уже сменилась)
         CacheManager.set(cacheKey, dates, cacheTTL);
@@ -1601,7 +1606,6 @@ async function loadAvailableDatesFromAPI(serviceName, cacheKey, cacheTTL, isBack
         State.isLoadingDates = false;  // 🔧 HOTFIX v22: Сбрасываем флаг загрузки
 
         console.log('✅ Обработанные даты (State.availableDates):', State.availableDates);
-        console.log('🎯 Set для календаря:', Array.from(new Set(State.availableDates.map(d => d.date))));
 
         // Обновляем календарь
         renderCalendarDays();
@@ -1663,7 +1667,7 @@ async function loadAvailableSlots(serviceName, date) {
 }
 
 /**
- * Вспомогательная функция для загрузки доступных слотов от API
+ * [T-002] Вспомогательная функция для загрузки доступных слотов из slots.json
  * @param {string} serviceName - Название услуги
  * @param {string} date - Дата в формате DD.MM.YYYY
  * @param {string} cacheKey - Ключ для сохранения в кеш
@@ -1672,33 +1676,20 @@ async function loadAvailableSlots(serviceName, date) {
  */
 async function loadAvailableSlotsFromAPI(serviceName, date, cacheKey, cacheTTL, isBackground = false) {
     try {
-        // 🔧 HOTFIX v16: Фоновые запросы не показывают popup при ошибке
-        const result = await BookingAPI.getAvailableSlots(serviceName, date, { showError: !isBackground });
-        console.log(isBackground ? '🔄 Фоновое обновление слотов:' : '📥 RAW slots от Make:', result.slots);
+        // [T-002] Загружаем все слоты из Git
+        const slotsData = await fetchSlotsFromGit();
 
-        // ✅ Make возвращает {array: [...], __IMTAGGLENGTH__: N}
-        // Берём массив из .array
-        let slotsArray = [];
-
-        if (Array.isArray(result.slots)) {
-            slotsArray = result.slots;
-        } else if (result.slots && Array.isArray(result.slots.array)) {
-            slotsArray = result.slots.array;
+        if (!slotsData) {
+            throw new Error('Не удалось загрузить slots.json');
         }
 
-        // Преобразуем {"0":"id", "1":"date", "2":"time"} → {id, date, time}
-        const allSlots = slotsArray
-            .map(slot => ({
-                id: slot["0"] || slot[0],
-                date: slot["1"] || slot[1],
-                time: slot["2"] || slot[2]
-            }))
-            .filter(s => s.time && s.date);
+        console.log(isBackground ? '🔄 Фоновое обновление слотов из slots.json' : '📥 Данные из slots.json загружены');
 
-        console.log('✅ Обработанные слоты:', allSlots);
+        // [T-002] Фильтруем слоты по услуге
+        const serviceSlots = filterSlotsByService(slotsData.slots, serviceName);
 
-        // ✅ ФИЛЬТРУЕМ только слоты для выбранной даты
-        const filteredSlots = allSlots.filter(slot => slot.date === date);
+        // [T-002] Получаем слоты для конкретной даты
+        const filteredSlots = getAvailableSlotsForDate(serviceSlots, date);
 
         // 📦 CACHE: Сохраняем в кеш (всегда, даже если дата уже сменилась)
         CacheManager.set(cacheKey, filteredSlots, cacheTTL);
@@ -1884,6 +1875,7 @@ async function cancelBooking(slotId) {
             // 🗑️ CACHE: Инвалидируем кеш после отмены бронирования
             console.log('🗑️ Инвалидация кеша после отмены бронирования...');
             CacheManager.clear(`bookings_${USER.id}`); // Список бронирований изменился
+            CacheManager.clear('slots_json'); // [T-002] Инвалидация slots.json
             CacheManager.clearPattern('dates_'); // Доступные даты могли измениться
             CacheManager.clearPattern('slots_'); // Слоты изменились
 
