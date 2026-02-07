@@ -43,6 +43,17 @@ const STATIC_SERVICES = [
     }
 ];
 
+// ===== HELPER FUNCTIONS =====
+
+/**
+ * Получает объект услуги по её ID
+ * @param {string} serviceId - ID услуги (diagnosis, package, family, single)
+ * @returns {Object|null} - Объект услуги или null если не найдена
+ */
+function getServiceById(serviceId) {
+    return STATIC_SERVICES.find(s => s.id === serviceId) || null;
+}
+
 // ===== ГЛОБАЛЬНОЕ СОСТОЯНИЕ ПРИЛОЖЕНИЯ =====
 const State = {
     currentTab: 'services',
@@ -897,7 +908,7 @@ function renderBookingScreen() {
                 <select class="service-select" onchange="onServiceSelect(this.value)">
                     <option value="">Выберите услугу</option>
                     ${services.map(s => `
-                        <option value="${escapeHtml(s.name)}" ${State.selectedService === s.name ? 'selected' : ''}>
+                        <option value="${escapeHtml(s.id)}" ${State.selectedService === s.id ? 'selected' : ''}>
                             ${escapeHtml(s.name)}
                         </option>
                     `).join('')}
@@ -1223,9 +1234,10 @@ async function confirmBooking() {
         return;
     }
     
+    const service = getServiceById(State.selectedService);
     const confirmed = confirm(
         `Подтвердить запись?\n\n` +
-        `Услуга: ${State.selectedService}\n` +
+        `Услуга: ${service ? service.name : State.selectedService}\n` +
         `Дата: ${State.selectedDate}\n` +
         `Время: ${State.selectedSlot}`
     );
