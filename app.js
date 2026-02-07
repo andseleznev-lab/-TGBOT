@@ -830,7 +830,7 @@ function renderServicesScreen() {
         <h1 class="screen-title fade-in">Выберите услугу</h1>
         <div class="services-grid fade-in">
             ${services.map(service => `
-                <div class="service-card glass-card" onclick="selectService('${escapeHtml(service.name)}')">
+                <div class="service-card glass-card" onclick="selectService('${escapeHtml(service.id)}')">
                     <div class="service-header">
                         <div class="service-icon">${CONFIG.SERVICE_ICONS[service.name] || '📋'}</div>
                         <div class="service-info">
@@ -1102,25 +1102,25 @@ function nextMonth() {
 
 // ===== ОБРАБОТЧИКИ СОБЫТИЙ =====
 
-function selectService(serviceName) {
+function selectService(serviceId) {
     // Проверяем, это ли информационная кнопка
-    const service = State.services.find(s => s.name === serviceName);
+    const service = State.services.find(s => s.id === serviceId);
     if (service && service.type === 'info_button') {
         tg.showAlert('Информация о клубе появится позже');
         return;
     }
-    
+
     // Переключаемся на экран бронирования
     switchTab('booking');
-    
+
     // Устанавливаем выбранную услугу
     setTimeout(() => {
-        onServiceSelect(serviceName);
+        onServiceSelect(serviceId);
     }, 100);
 }
 
-async function onServiceSelect(serviceName) {
-    if (!serviceName) return;
+async function onServiceSelect(serviceId) {
+    if (!serviceId) return;
 
     // 🔧 HOTFIX v24: Отменяем ВСЕ активные запросы при смене услуги
     // Это предотвращает накопление "мёртвых" запросов к Make.com
@@ -1133,21 +1133,21 @@ async function onServiceSelect(serviceName) {
     });
 
     // 🔧 ИСПРАВЛЕНИЕ 6: Очищаем предыдущее состояние
-    State.selectedService = serviceName;
+    State.selectedService = serviceId;
     State.selectedDate = null;
     State.selectedSlot = null;
     State.availableSlots = [];
     State.availableDates = []; // 🔧 HOTFIX v19: Очищаем даты при смене услуги
     State.currentMonth = new Date();
 
-    console.log(`🔄 onServiceSelect: выбрана услуга "${serviceName}", state очищен`);
+    console.log(`🔄 onServiceSelect: выбрана услуга "${serviceId}", state очищен`);
 
     renderBookingScreen();
 
     // Загружаем доступные даты
     try {
         showLoader();
-        await loadAvailableDates(serviceName);
+        await loadAvailableDates(serviceId);
         hideLoader();
         renderBookingScreen();
     } catch (error) {
@@ -1519,9 +1519,9 @@ async function loadServices() {
     console.log('✅ Загружены статичные услуги:', State.services);
 }
 
-async function loadAvailableDates(serviceName) {
+async function loadAvailableDates(serviceId) {
     // 📦 CACHE: Ключ кеша для дат услуги
-    const cacheKey = `dates_${serviceName}`;
+    const cacheKey = `dates_${serviceId}`;
     const CACHE_TTL = 10 * 60 * 1000; // 10 минут
 
     // 📦 CACHE: Проверяем кеш перед загрузкой
@@ -1529,41 +1529,41 @@ async function loadAvailableDates(serviceName) {
 
     if (cached && !cached.isExpired) {
         // ✅ Кеш свежий - показываем мгновенно
-        console.log(`📦 Загружены даты из кеша для ${serviceName} (свежие)`);
+        console.log(`📦 Загружены даты из кеша для ${serviceId} (свежие)`);
         State.availableDates = cached.data;
         renderCalendarDays(); // Сразу отрисовываем календарь
 
         // 🔄 В фоне обновляем данные от Make.com (stale-while-revalidate)
-        console.log(`🔄 Обновление дат для ${serviceName} в фоне...`);
-        loadAvailableDatesFromAPI(serviceName, cacheKey, CACHE_TTL, true);
+        console.log(`🔄 Обновление дат для ${serviceId} в фоне...`);
+        loadAvailableDatesFromAPI(serviceId, cacheKey, CACHE_TTL, true);
         return;
     }
 
     if (cached && cached.isExpired) {
         // ⏰ Кеш устарел - показываем старые данные
-        console.log(`📦 Загружены даты из кеша для ${serviceName} (устаревшие) - обновление...`);
+        console.log(`📦 Загружены даты из кеша для ${serviceId} (устаревшие) - обновление...`);
         State.availableDates = cached.data;
         State.isLoadingDates = false;  // 🔧 HOTFIX v22: Есть данные из кеша - не показываем loading
         renderCalendarDays(); // Показываем старые данные
     } else if (!cached) {
         // 🔧 HOTFIX v23: Кеша нет - показываем loading
         State.isLoadingDates = true;
-        console.log(`⏳ [loadAvailableDates] Нет кеша для ${serviceName} - показываем loading`);
+        console.log(`⏳ [loadAvailableDates] Нет кеша для ${serviceId} - показываем loading`);
         renderBookingScreen();  // 🔧 HOTFIX v23: Рендерим сразу чтобы показать спиннер "Загрузка дат..."
     }
 
     // 🌐 Загружаем свежие данные от Make.com
-    await loadAvailableDatesFromAPI(serviceName, cacheKey, CACHE_TTL, false);
+    await loadAvailableDatesFromAPI(serviceId, cacheKey, CACHE_TTL, false);
 }
 
 /**
  * [T-002] Вспомогательная функция для загрузки доступных дат из slots.json
- * @param {string} serviceName - Название услуги
+ * @param {string} serviceId - ID услуги
  * @param {string} cacheKey - Ключ для сохранения в кеш
  * @param {number} cacheTTL - Время жизни кеша
  * @param {boolean} isBackground - Фоновая загрузка
  */
-async function loadAvailableDatesFromAPI(serviceName, cacheKey, cacheTTL, isBackground = false) {
+async function loadAvailableDatesFromAPI(serviceId, cacheKey, cacheTTL, isBackground = false) {
     try {
         // [T-002] Загружаем все слоты из Git
         const slotsData = await fetchSlotsFromGit();
@@ -1575,7 +1575,7 @@ async function loadAvailableDatesFromAPI(serviceName, cacheKey, cacheTTL, isBack
         console.log(isBackground ? '🔄 Фоновое обновление дат из slots.json' : '📥 Данные из slots.json загружены');
 
         // [T-002] Фильтруем слоты по услуге
-        const serviceSlots = filterSlotsByService(slotsData.slots, serviceName);
+        const serviceSlots = filterSlotsByService(slotsData.slots, serviceId);
 
         // [T-002] Извлекаем доступные даты
         const dates = getAvailableDatesFromSlots(serviceSlots);
@@ -1584,8 +1584,8 @@ async function loadAvailableDatesFromAPI(serviceName, cacheKey, cacheTTL, isBack
         CacheManager.set(cacheKey, dates, cacheTTL);
 
         // 🔧 HOTFIX v17: Проверяем что услуга не сменилась во время запроса
-        if (State.selectedService !== serviceName) {
-            console.log(`⏭️ Пропускаем обновление дат: услуга изменилась с ${serviceName} на ${State.selectedService}`);
+        if (State.selectedService !== serviceId) {
+            console.log(`⏭️ Пропускаем обновление дат: услуга изменилась с ${serviceId} на ${State.selectedService}`);
             return;
         }
 
@@ -1607,8 +1607,8 @@ async function loadAvailableDatesFromAPI(serviceName, cacheKey, cacheTTL, isBack
         });
 
         // 🔧 HOTFIX v17: Проверяем что услуга не сменилась во время запроса
-        if (State.selectedService !== serviceName) {
-            console.log(`⏭️ Пропускаем обработку ошибки дат: услуга изменилась с ${serviceName} на ${State.selectedService}`);
+        if (State.selectedService !== serviceId) {
+            console.log(`⏭️ Пропускаем обработку ошибки дат: услуга изменилась с ${serviceId} на ${State.selectedService}`);
             return; // Не обновляем State - это старый запрос
         }
 
@@ -1632,9 +1632,9 @@ async function loadAvailableDatesFromAPI(serviceName, cacheKey, cacheTTL, isBack
     }
 }
 
-async function loadAvailableSlots(serviceName, date) {
+async function loadAvailableSlots(serviceId, date) {
     // 📦 CACHE: Ключ кеша для слотов услуги и даты
-    const cacheKey = `slots_${serviceName}_${date}`;
+    const cacheKey = `slots_${serviceId}_${date}`;
     const CACHE_TTL = 10 * 60 * 1000; // 10 минут
 
     // 📦 CACHE: Проверяем кеш перед загрузкой
@@ -1645,24 +1645,24 @@ async function loadAvailableSlots(serviceName, date) {
 
     if (isBackground) {
         // ✅ Кеш свежий - только фоновое обновление
-        console.log(`🔄 [loadAvailableSlots] Фоновое обновление для ${serviceName}/${date}`);
+        console.log(`🔄 [loadAvailableSlots] Фоновое обновление для ${serviceId}/${date}`);
     } else {
-        console.log(`🌐 [loadAvailableSlots] Загрузка от API для ${serviceName}/${date}`);
+        console.log(`🌐 [loadAvailableSlots] Загрузка от API для ${serviceId}/${date}`);
     }
 
     // 🌐 Загружаем данные от Make.com
-    await loadAvailableSlotsFromAPI(serviceName, date, cacheKey, CACHE_TTL, isBackground);
+    await loadAvailableSlotsFromAPI(serviceId, date, cacheKey, CACHE_TTL, isBackground);
 }
 
 /**
  * [T-002] Вспомогательная функция для загрузки доступных слотов из slots.json
- * @param {string} serviceName - Название услуги
+ * @param {string} serviceId - ID услуги
  * @param {string} date - Дата в формате DD.MM.YYYY
  * @param {string} cacheKey - Ключ для сохранения в кеш
  * @param {number} cacheTTL - Время жизни кеша
  * @param {boolean} isBackground - Фоновая загрузка
  */
-async function loadAvailableSlotsFromAPI(serviceName, date, cacheKey, cacheTTL, isBackground = false) {
+async function loadAvailableSlotsFromAPI(serviceId, date, cacheKey, cacheTTL, isBackground = false) {
     try {
         // [T-002] Загружаем все слоты из Git
         const slotsData = await fetchSlotsFromGit();
@@ -1674,7 +1674,7 @@ async function loadAvailableSlotsFromAPI(serviceName, date, cacheKey, cacheTTL, 
         console.log(isBackground ? '🔄 Фоновое обновление слотов из slots.json' : '📥 Данные из slots.json загружены');
 
         // [T-002] Фильтруем слоты по услуге
-        const serviceSlots = filterSlotsByService(slotsData.slots, serviceName);
+        const serviceSlots = filterSlotsByService(slotsData.slots, serviceId);
 
         // [T-002] Получаем слоты для конкретной даты
         const filteredSlots = getAvailableSlotsForDate(serviceSlots, date);
