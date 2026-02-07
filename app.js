@@ -306,7 +306,8 @@ class BookingAPI {
         // Определяем retryable на основе типа операции
         // GET операции (чтение) - можно retry автоматически
         // POST операции (создание/изменение) - только manual retry
-        const readOnlyActions = ['get_services', 'get_available_dates', 'get_slots', 'get_user_bookings'];
+        // [T-002] Только get_user_bookings остался - все остальные read операции через Git
+        const readOnlyActions = ['get_user_bookings'];
         const retryable = readOnlyActions.includes(action);
 
         try {
@@ -369,17 +370,10 @@ class BookingAPI {
         }
     }
 
-    static async getServices() {
-        return await this.request('get_services');
-    }
-
-    static async getAvailableDates(serviceName, options = {}) {
-        return await this.request('get_available_dates', { service_name: serviceName }, options);
-    }
-
-    static async getAvailableSlots(serviceName, date, options = {}) {
-        return await this.request('get_slots', { service_name: serviceName, date: date }, options);
-    }
+    // [T-002] Методы удалены, используем данные из Git:
+    // - getServices() → CONFIG.SERVICES (статичный список)
+    // - getAvailableDates() → fetchSlotsFromGit() + getAvailableDatesFromSlots()
+    // - getAvailableSlots() → fetchSlotsFromGit() + getAvailableSlotsForDate()
 
     static async bookSlot(serviceName, date, time) {
         return await this.request('book_slot', { 
@@ -1368,39 +1362,21 @@ async function fetchSlotsFromGitAPI(cacheKey, cacheTTL, isBackground = false) {
     } catch (error) {
         console.error('❌ [fetchSlotsFromGit] Ошибка загрузки из GitHub:', error.message);
 
-        // Fallback на старый Make.com API
-        if (CONFIG.SLOTS_JSON_FALLBACK) {
-            console.log('🔄 [fetchSlotsFromGit] Fallback на Make.com API...');
+        // [T-002] Попытка использовать устаревший кеш при ошибке GitHub
+        const cached = CacheManager.get(cacheKey);
+        if (cached) {
+            console.log('📦 [fetchSlotsFromGit] Используем устаревший кеш при ошибке GitHub');
+            return cached.data;
+        }
 
-            try {
-                // Используем старый API для получения дат и слотов
-                // В рамках Этапа 1 просто логируем - реальный fallback будет в Этапе 3
-                console.warn('⚠️ [fetchSlotsFromGit] Fallback на Make.com API пока не реализован');
-
-                // Пока пробрасываем ошибку
-                throw error;
-
-            } catch (fallbackError) {
-                console.error('❌ [fetchSlotsFromGit] Fallback также не удался:', fallbackError.message);
-
-                // Пытаемся использовать устаревший кеш
-                const cached = CacheManager.get(cacheKey);
-                if (cached) {
-                    console.log('📦 [fetchSlotsFromGit] Используем устаревший кеш при ошибке');
-                    return cached.data;
-                }
-
-                // Нет ни свежих данных, ни кеша
-                if (!isBackground) {
-                    throw new Error('Не удалось загрузить расписание');
-                } else {
-                    // Фоновая загрузка - не бросаем ошибку
-                    return null;
-                }
-            }
+        // Нет ни свежих данных, ни кеша - бросаем ошибку
+        if (!isBackground) {
+            console.error('❌ [fetchSlotsFromGit] Нет кеша, не удалось загрузить из GitHub');
+            throw new Error('Не удалось загрузить расписание');
         } else {
-            // Fallback отключён
-            throw error;
+            // Фоновая загрузка - не бросаем ошибку
+            console.warn('⚠️ [fetchSlotsFromGit] Фоновое обновление не удалось, кеша нет');
+            return null;
         }
     }
 }
