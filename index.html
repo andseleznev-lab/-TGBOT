@@ -346,12 +346,12 @@ Telegram User ID: ${window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 'unknow
     </script>
 
     <!-- Основные скрипты приложения -->
-    <script src="config.js?v=16"></script>
-    <script src="app.js?v=25">
+    <script src="config.js?v=26"></script>
+    <script src="app.js?v=26">
 
     <!-- 📝 Логирование для проверки загрузки -->
     <script>
-        console.log('✅ index.html loaded - version 25.0 - [T-001] HOTFIX: Error haptic только для реальных ошибок (не AbortError)');
+        console.log('✅ index.html loaded - version 26.0 - [T-002] Удалён Make.com API для read-операций, все данные из Git');
         console.log('📦 Files loaded:', {
             telegram: !!window.Telegram,
             config: !!window.CONFIG,
