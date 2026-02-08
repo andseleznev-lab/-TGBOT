@@ -1,4 +1,4 @@
-# Conventions - Правила проекта Mini App
+# Conventions (compact)
 
 ## О проекте
 
@@ -8,38 +8,31 @@
 **Репозиторий**: GitHub (папка -TGBOT)  
 **IDE**: VS Code + Claude Code CLI
 
----
+## Комментарии и документация
 
-## Архитектура приложения
+**JSDoc обязателен для функций** — описывает назначение и контракт.
+```js
+/**
+ * Создаёт бронирование в Make.com
+ * @param {string} serviceId ID услуги из CONFIG.SERVICES
+ * @param {Date} date Дата бронирования
+ * @param {string} time Время "HH:MM"
+ * @returns {Promise<Object|null>} Результат или null при ошибке
+ */
+async function createBooking(serviceId, date, time) {
+  // ...
+}
 
-### Структура файлов
 
-LogIos                # логи из Eruda
-LogMake               # логи из Make
-index.html           # Главная страница с 4 табами
-config.js           # Конфигурация (services, Make.com URL, USER)
-app.js              # Вся логика приложения
-styles.css          # Все стили (Glassmorphism + Beige)
-docs/                   # Документация и артефакты (создаём далее)
+**Inline-комментарии** — только для неочевидной логики и причин
+  js
+// Отменяем предыдущий запрос (race condition)
+if (currentRequest) currentRequest.abort();
+
+// Новый AbortController для текущего запроса
+currentRequest = new AbortController();
 ```
-
-### Основные компоненты
-
-**4 основных экрана (табы)**:
-1. **Services** - список услуг с выбором
-2. **Payment** - выбор способа оплаты
-3. **Booking** - календарь и слоты времени
-4. **My Bookings** - история бронирований
-
-**Глобальные переменные**:
-- `tg` - объект Telegram WebApp
-- `USER` - данные пользователя из Telegram
-- `CONFIG` - конфигурация приложения
-- `STATE` - глобальное состояние приложения
-
----
-
-## Стиль кодирования
+# Стиль кодирования
 
 ### JavaScript
 
@@ -76,55 +69,27 @@ async function createBooking(serviceId, date) {
     return null;
   }
 }
-```
+
+**Правила**:
+
+- Не комментировать очевидный код
+- Объяснять «почему», а не «что»
+
+## Работа с Make.com Backend
+
+**Важно**: прямого доступа к Make.com нет.
+
+**Можно**:
+- Предлагать изменения структуры запросов
+- Давать краткие альтернативы
 
 **Обработка ошибок**:
+
 - **Всегда** используем try/catch для async операций
-- **Логируем** ошибки в console.error
+- **Логируем** ошибки в Eruda
 - **Показываем** пользователю понятное сообщение (не техническую ошибку!)
 
-**Async/Await**:
-```javascript
-// ✅ ПРАВИЛЬНО
-async function fetchData() {
-  try {
-    const response = await fetch(url);
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('Fetch failed:', error);
-    return null;
-  }
-}
-
-// ❌ НЕПРАВИЛЬНО (не используем .then/.catch цепочки)
-function fetchData() {
-  return fetch(url)
-    .then(res => res.json())
-    .catch(err => console.error(err));
-}
-```
-
----
-
-### HTML
-
-**Семантика**:
-- Используем семантические теги: `<main>`, `<section>`, `<article>`, `<nav>`
-- ID для уникальных элементов: `id="app"`, `id="services-screen"`
-- Классы для стилизации: `class="glass-card service-card"`
-
-**Data-атрибуты**:
-```html
-<!-- Для хранения динамических данных -->
-<div class="service-card" data-service-id="diagnosis" data-price="0">
-  ...
-</div>
-```
-
----
-
-### CSS
+## CSS
 
 **Дизайн-система**: Glassmorphism + Beige палитра
 
@@ -154,7 +119,6 @@ function fetchData() {
 /* Утилитные классы */
 .hidden { display: none !important; }
 .fade-in { animation: fadeIn 0.3s ease-in; }
-```
 
 **Glassmorphism эффекты**:
 ```css
@@ -165,7 +129,7 @@ function fetchData() {
   border: 1px solid var(--glass-border);
   box-shadow: var(--glass-shadow);
 }
-```
+
 
 **Transitions**:
 - Быстрые (0.2s): hover эффекты кнопок
@@ -175,95 +139,6 @@ function fetchData() {
 **Mobile-first**:
 - Базовые стили для мобильных (320px+)
 - Media queries для планшетов (768px+)
-
----
-
-## Работа с Telegram WebApp API
-
-### Инициализация
-```javascript
-const tg = window.Telegram.WebApp;
-tg.ready();                      // Сигнализируем готовность
-tg.expand();                     // Разворачиваем на весь экран
-tg.enableClosingConfirmation(); // Подтверждение при закрытии
-```
-
-### Получение данных пользователя
-```javascript
-const USER = {
-  id: tg.initDataUnsafe?.user?.id || 0,
-  firstName: tg.initDataUnsafe?.user?.first_name || 'Гость',
-  lastName: tg.initDataUnsafe?.user?.last_name || '',
-  username: tg.initDataUnsafe?.user?.username || '',
-};
-```
-
-### MainButton (кнопка внизу экрана)
-```javascript
-// Показать кнопку
-tg.MainButton.text = 'Подтвердить бронирование';
-tg.MainButton.color = '#D4A574';
-tg.MainButton.show();
-
-// Обработчик клика
-tg.MainButton.onClick(() => {
-  // Действие
-  tg.MainButton.hide();
-});
-
-// Скрыть после использования
-tg.MainButton.hide();
-```
-
-### HapticFeedback (вибрация)
-```javascript
-// При успешном действии
-tg.HapticFeedback.notificationOccurred('success');
-
-// При ошибке
-tg.HapticFeedback.notificationOccurred('error');
-
-// При выборе
-tg.HapticFeedback.selectionChanged();
-```
-
----
-
-## Работа с Make.com Backend
-
-### Структура вебхука
-**Единый endpoint**: `https://hook.eu2.make.com/r61db3c6xvtw765yx3hy8629561k23ba`
-
-**7 типов операций** (определяется через `action`):
-1. `get-services` - получить список услуг (НЕ используется, услуги хардкод в config.js)
-2. `get-available-dates` - получить доступные даты
-3. `get-time-slots` - получить свободные слоты времени
-4. `create-booking` - создать бронирование
-5. `get-bookings` - получить бронирования пользователя
-6. `cancel-booking` - отменить бронирование
-7. `update-booking` - обновить бронирование
-
-
-## Обработка ошибок
-
-### Уровни ошибок
-
-**1. Технические ошибки** (логируем в консоль):
-```javascript
-console.error('API request failed:', error); 
-console.error('Invalid data format:', data);
-```
-
-**2. Пользовательские ошибки** (показываем в UI):
-```javascript
-function showUserError(message) {
-  // Показать Toast/Alert
-  alert(message); // Временное решение
-  
-  // Haptic feedback
-  tg.HapticFeedback.notificationOccurred('error');
-}
-```
 
 ### Типичные ошибки и их обработка
 
@@ -302,9 +177,6 @@ try {
   showUserError('Произошла ошибка. Попробуйте позже.');
   return null;
 }
-```
-
----
 
 ## Тестирование
 
@@ -322,166 +194,64 @@ try {
 ### Стресс-тесты
 
 **Быстрое переключение табов**:
+
 - 10 + кликов по табам за 10 секунд
 - Приложение не должно зависнуть
-- Должна быть отмена предыдущих запросов
 
 **Множественные клики по кнопкам**:
 - 10+ кликов по "Забронировать" за секунду
 - Должно создаться только 1 бронирование
 
-**Потеря сети**:
-- Включить Airplane mode
-- Попробовать создать бронирование
-- Должна быть понятная ошибка
-
----
-
 ## Безопасность
 
 ### Секреты и API ключи
 
-❌ **НИКОГДА не коммитим**:
+**НИКОГДА не коммитим**:
 - Make.com webhook URLs (если содержат токены)
 - API ключи Zoom, Google Calendar
 - Пароли, токены доступа
 
-### Валидация данных
-
-**Frontend (перед отправкой в Make)**:
-```javascript
-function validateBookingData(data) {
-  if (!data.service_id || typeof data.service_id !== 'string') {
-    return { valid: false, error: 'Выберите услугу' };
-  }
-  
-  if (!data.date || !(data.date instanceof Date)) {
-    return { valid: false, error: 'Выберите дату' };
-  }
-  
-  if (!data.time || !/^\d{2}:\d{2}$/.test(data.time)) {
-    return { valid: false, error: 'Выберите время' };
-  }
-  
-  return { valid: true };
-}
-```
-
----
 
 ## Git Workflow
 
 ### Формат коммитов
 
-```
 [TICKET-ID] Краткое описание изменений
 
-- Детальное описание что сделано
-
 **Примеры**:
-```
+
 [T-104] Добавлена валидация формы бронирования
 
 - Реализована validateBookingData() с проверкой всех полей
 - Добавлена обработка edge cases
 - Обновлены стили для ошибок валидации
-```
 
-```
 [FIX] Исправлено зависание при переключении табов
 
 - Добавлен AbortController для отмены запросов
 - Реализован debouncing 500ms для кликов
 - Оптимизирован рендеринг календаря
-```
 
-### Ветки
-
-- `main` - Production (GitHub Pages)
-- `dev` - Development
-- `feature/T-XXX-description` - Фичи
-- `fix/description` - Hotfixes
-
----
-
-## Запрещённые практики
-
-❌ **Никогда не делаем**:
-
-- Игнорирование ошибок (всегда try/catch)
-
----
-
-## Рекомендуемые практики
-
-✅ **Всегда делаем**:
-- Используем const/let (не var)
-- Async/await вместо промисов
-- Валидация перед отправкой данных
-- Отмена предыдущих запросов (AbortController)
-- Debouncing для частых событий
-- Понятные сообщения об ошибках для пользователя
-- JSDoc комментарии для функций
-- Мобильное тестирование (Eruda DevTools)
-
----
-
-## Отладка
-
-### Инструменты
-
-**Desktop (VS Code)**:
-- Chrome DevTools
-- Network tab для API запросов
-- Console для логов
-
-**Mobile (Telegram)**:             # всегда делает человек присылает логи в @logIos
-```javascript
-// Подключаем Eruda в index.html       # уже подключен 
-<script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-<script>eruda.init();</script>      
-```
-
-### Логирование
-
-```javascript
-// Режим разработки
-const DEBUG = true;
-
-function log(...args) {
-  if (DEBUG) {
-    console.log('[MiniApp]', ...args);
-  }
-}
-
-// Использование
-log('User selected service:', serviceId);
-log('Available slots:', slots);
-```
-
-**Перед релизом**: установить `DEBUG = false`
-
----
-
-## Производительность
+# Производительность
 
 ### Критичные моменты
 
 1. **Минимизация API вызовов**
-   - Услуги хардкод в config.js (не грузим каждый раз)
-   - Кеширование доступных дат (5 сек TTL)
+   
+   - Кеширование доступных дат и слотов
    - Отмена предыдущих запросов
 
 2. **Оптимизация рендеринга**
+
    - Не перерисовываем весь экран, только изменённые элементы
    - Используем DocumentFragment для множественных вставок
-   - CSS transitions вместо JS анимаций
+  
 
 3. **Debouncing частых событий**
+
    - Tab clicks: 500ms
    - Calendar navigation: 300ms
    - Search/filter: 500ms
 
----
-
 Этот файл - **источник истины** для всего проекта. При любых сомнениях - смотрим сюда.
+
