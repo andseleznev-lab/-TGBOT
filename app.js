@@ -151,10 +151,10 @@ async function createPayment(slotId, serviceId) {
         showLoader();
 
         // Отправляем запрос на создание платежа
+        // ⚠️ amount НЕ отправляем - Make.com сам определяет цену по service ID (security)
         const result = await BookingAPI.request('create_payment', {
             slot_id: slotId,
-            service: serviceId,
-            amount: price
+            service: serviceId
         });
 
         hideLoader();
