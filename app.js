@@ -54,6 +54,173 @@ function getServiceById(serviceId) {
     return STATIC_SERVICES.find(s => s.id === serviceId) || null;
 }
 
+// ===== [T-003] YOOKASSA PAYMENT FUNCTIONS =====
+
+/**
+ * [T-003] Вычисляет оставшееся время до истечения блокировки слота
+ * @param {string} lockedUntil - ISO timestamp когда истекает блокировка (например, "2026-02-08T15:30:00Z")
+ * @returns {Object} - { hours: number, minutes: number, isExpired: boolean }
+ *
+ * @example
+ * const remaining = calculateTimeRemaining('2026-02-08T15:30:00Z');
+ * console.log(`Осталось ${remaining.hours}ч ${remaining.minutes}м`);
+ */
+function calculateTimeRemaining(lockedUntil) {
+    try {
+        const now = Date.now();
+        const lockExpiry = new Date(lockedUntil).getTime();
+        const diff = lockExpiry - now;
+
+        if (diff <= 0) {
+            return { hours: 0, minutes: 0, isExpired: true };
+        }
+
+        const hours = Math.floor(diff / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+        return { hours, minutes, isExpired: false };
+    } catch (error) {
+        console.error('❌ [calculateTimeRemaining] Ошибка парсинга даты:', error);
+        return { hours: 0, minutes: 0, isExpired: true };
+    }
+}
+
+/**
+ * [T-003] Рендерит locking слот с таймером и кнопкой оплаты (если свой слот)
+ * @param {Object} slot - Объект слота с полями { id, time, date, status, user_id, locked_until }
+ * @returns {string} - HTML строка для вставки в slots-grid
+ *
+ * @example
+ * const lockingSlotHTML = renderLockingSlot({
+ *   id: 'slot_123', time: '14:00', status: 'locking',
+ *   user_id: 123456, locked_until: '2026-02-08T15:00:00Z'
+ * });
+ */
+function renderLockingSlot(slot) {
+    const isOwnSlot = slot.user_id === USER.id;
+    const remaining = calculateTimeRemaining(slot.locked_until);
+    const timerText = remaining.isExpired
+        ? 'Истёк'
+        : `${remaining.hours}ч ${remaining.minutes}м`;
+
+    // Класс: slot--locking для чужих, slot--own для своих
+    const slotClass = isOwnSlot ? 'slot--own' : 'slot--locking';
+
+    return `
+        <div class="slot-btn ${slotClass}">
+            <div>${slot.time}</div>
+            <div class="payment-timer">${timerText}</div>
+            ${isOwnSlot && !remaining.isExpired ? `
+                <button class="payment-btn" onclick="event.stopPropagation(); createPayment('${slot.id}', '${State.selectedService}')">
+                    Оплатить
+                </button>
+            ` : ''}
+        </div>
+    `;
+}
+
+/**
+ * [T-003] Создаёт платёж через Make.com и возвращает payment_url
+ * @param {string} slotId - ID слота для бронирования
+ * @param {string} serviceId - ID услуги (diagnosis, package, family, single)
+ * @returns {Promise<string>} - URL страницы оплаты YooKassa
+ * @throws {Error} - Если создание платежа не удалось
+ *
+ * @example
+ * const paymentUrl = await createPayment('slot_123', 'single');
+ * openPaymentWindow(paymentUrl);
+ */
+async function createPayment(slotId, serviceId) {
+    try {
+        console.log(`💳 [createPayment] Создание платежа для слота ${slotId}, услуга ${serviceId}`);
+
+        // Проверяем цену услуги
+        const price = CONFIG.SERVICE_PRICES[serviceId];
+        if (price === undefined || price === null) {
+            throw new Error(`Неизвестная услуга: ${serviceId}`);
+        }
+
+        // Для бесплатных услуг (diagnosis: 0) - пропускаем оплату
+        if (price === 0) {
+            console.log('✅ Услуга бесплатная - пропускаем создание платежа');
+            tg.showAlert('Бесплатная услуга - платёж не требуется');
+            return null;
+        }
+
+        // Показываем loader
+        showLoader();
+
+        // Отправляем запрос на создание платежа
+        const result = await BookingAPI.request('create_payment', {
+            slot_id: slotId,
+            service: serviceId,
+            amount: price
+        });
+
+        hideLoader();
+
+        // Проверяем результат
+        if (!result.success) {
+            throw new Error(result.error || 'Не удалось создать платёж');
+        }
+
+        if (!result.payment_url) {
+            throw new Error('Не получен payment_url от сервера');
+        }
+
+        console.log('✅ [createPayment] Платёж создан, URL получен');
+
+        // Открываем окно оплаты
+        openPaymentWindow(result.payment_url);
+
+        return result.payment_url;
+
+    } catch (error) {
+        hideLoader();
+        console.error('❌ [createPayment] Ошибка создания платежа:', error);
+
+        // Показываем понятное сообщение пользователю
+        if (tg.HapticFeedback) {
+            tg.HapticFeedback.notificationOccurred('error');
+        }
+        tg.showAlert('Не удалось создать платёж. Попробуйте позже.');
+
+        throw error;
+    }
+}
+
+/**
+ * [T-003] Открывает окно оплаты YooKassa в Telegram WebView
+ * @param {string} paymentUrl - URL страницы оплаты от YooKassa
+ * @returns {void}
+ *
+ * @example
+ * openPaymentWindow('https://yoomoney.ru/checkout/payments/v2/contract?orderId=...');
+ */
+function openPaymentWindow(paymentUrl) {
+    try {
+        console.log('🌐 [openPaymentWindow] Открытие окна оплаты:', paymentUrl);
+
+        // Haptic feedback при открытии
+        if (tg.HapticFeedback) {
+            tg.HapticFeedback.impactOccurred('medium');
+        }
+
+        // Открываем внешнюю ссылку в Telegram WebView
+        tg.openLink(paymentUrl);
+
+        console.log('✅ [openPaymentWindow] Окно оплаты открыто');
+
+    } catch (error) {
+        console.error('❌ [openPaymentWindow] Ошибка открытия окна:', error);
+
+        if (tg.HapticFeedback) {
+            tg.HapticFeedback.notificationOccurred('error');
+        }
+        tg.showAlert('Не удалось открыть окно оплаты');
+    }
+}
+
 // ===== ГЛОБАЛЬНОЕ СОСТОЯНИЕ ПРИЛОЖЕНИЯ =====
 const State = {
     currentTab: 'services',

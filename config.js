@@ -10,6 +10,22 @@ const CONFIG = {
     // [T-002] URL для slots.json из Git (статический файл)
     SLOTS_JSON_URL: 'https://raw.githubusercontent.com/andseleznev-lab/-TGBOT/main/slots.json',
 
+    // [T-003] YooKassa payment integration
+    YOOKASSA: {
+        // Используем существующий main webhook для создания платежей
+        paymentEndpoint: 'https://hook.eu2.make.com/r61db3c6xvtw765yx3hy8629561k23ba',
+        // TODO: Заменить YourBotName на реальный username бота
+        returnUrl: 'https://t.me/YourBotName/app?tab=mybookings'
+    },
+
+    // [T-003] Объект для удобного доступа к ценам услуг (используется в createPayment)
+    SERVICE_PRICES: {
+        diagnosis: 0,
+        package: 75000,
+        family: 10000,
+        single: 8000
+    },
+
     // Статичный список услуг (не загружаем из Make)
     SERVICES: [
         {

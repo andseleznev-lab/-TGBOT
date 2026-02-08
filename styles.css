@@ -533,6 +533,74 @@ body {
     cursor: not-allowed;
 }
 
+/* [T-003] Locking slots - слоты в процессе оплаты */
+.slot-btn.slot--locking {
+    background: linear-gradient(135deg, rgba(255, 100, 100, 0.3), rgba(255, 120, 120, 0.4));
+    border: 2px solid rgba(216, 149, 149, 0.6);
+    color: var(--error);
+    cursor: not-allowed;
+    position: relative;
+    padding: 12px 16px;
+    min-height: 80px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+/* [T-003] Свой locking слот (может оплатить) */
+.slot-btn.slot--own {
+    background: linear-gradient(135deg, rgba(168, 198, 134, 0.3), rgba(197, 225, 165, 0.4));
+    border: 2px solid rgba(168, 198, 134, 0.6);
+    color: var(--success);
+    cursor: pointer;
+}
+
+.slot-btn.slot--own:hover {
+    background: linear-gradient(135deg, rgba(168, 198, 134, 0.4), rgba(197, 225, 165, 0.5));
+    transform: scale(1.05);
+}
+
+/* [T-003] Таймер обратного отсчёта в locking слоте */
+.payment-timer {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.slot-btn.slot--locking .payment-timer {
+    color: var(--error);
+}
+
+.slot-btn.slot--own .payment-timer {
+    color: var(--success);
+}
+
+/* [T-003] Кнопка "Оплатить" в своём locking слоте */
+.payment-btn {
+    padding: 6px 12px;
+    background: var(--accent-gradient);
+    color: var(--text-white);
+    border: none;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    margin-top: 4px;
+}
+
+.payment-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(212, 165, 116, 0.4);
+}
+
+.payment-btn:active {
+    transform: translateY(0);
+}
+
 .slots-empty {
     text-align: center;
     padding: 32px;
