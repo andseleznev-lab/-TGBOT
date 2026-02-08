@@ -1145,49 +1145,127 @@ function renderBookingScreen() {
 }
 
 // Экран "Мои записи"
+/**
+ * [T-003] Рендерит booking card для слота в статусе locking (ожидает оплаты)
+ * Все данные экранированы через escapeHtml для защиты от XSS
+ * @param {Object} booking - Объект бронирования со статусом 'locking'
+ * @returns {string} - HTML строка для service-card
+ */
+function renderLockingBookingCard(booking) {
+    const remaining = calculateTimeRemaining(booking.locked_until);
+    const timerText = remaining.isExpired
+        ? 'Время истекло'
+        : `Осталось: ${remaining.hours}ч ${remaining.minutes}м`;
+
+    const service = getServiceById(booking.service_id || booking.service);
+    const price = CONFIG.SERVICE_PRICES[booking.service_id || booking.service] || 0;
+    const serviceName = escapeHtml(service ? service.name : booking.service);
+    const bookingDate = escapeHtml(booking.date);
+    const bookingTime = escapeHtml(booking.time);
+    const bookingId = escapeHtml(booking.id);
+    const serviceId = escapeHtml(booking.service_id || booking.service);
+
+    return `
+        <div class="service-card glass-card" style="border: 2px solid rgba(255, 165, 0, 0.5); background: rgba(255, 165, 0, 0.05);">
+            <div class="service-header">
+                <div class="service-icon">⏳</div>
+                <div class="service-info">
+                    <div class="service-name">${serviceName}</div>
+                    <div class="service-duration">${bookingDate} в ${bookingTime}</div>
+                </div>
+            </div>
+            <div class="service-description">
+                <div class="payment-timer" style="font-size: 13px; color: var(--text-primary); margin-bottom: 8px;">
+                    ${timerText}
+                </div>
+                ${!remaining.isExpired ? `
+                    <button
+                        class="payment-btn"
+                        style="width: 100%; padding: 10px; font-size: 14px;"
+                        onclick="createPayment('${bookingId}', '${serviceId}')">
+                        Оплатить ${price.toLocaleString('ru-RU')} ₽
+                    </button>
+                ` : `
+                    <p style="color: var(--error); font-size: 13px;">
+                        Время для оплаты истекло. Забронируйте слот заново.
+                    </p>
+                `}
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * [T-003] Экран "Мои записи" с поддержкой locking слотов
+ * Разделяет записи на: ожидающие оплаты (locking) и подтверждённые (book)
+ * Все пользовательские данные экранированы через escapeHtml для защиты от XSS
+ */
 function renderMyBookingsScreen() {
     const bookings = State.userBookings;
-    
+
+    // [T-003] Разделяем bookings на locking и completed
+    const lockingBookings = bookings.filter(b => b.status === 'locking');
+    const completedBookings = bookings.filter(b => b.status !== 'locking');
+
     const html = `
         <h1 class="screen-title fade-in">Мои записи</h1>
-        ${bookings.length > 0 ? `
+
+        ${lockingBookings.length > 0 ? `
+            <div class="fade-in" style="margin-bottom: 24px;">
+                <h2 style="font-size: 16px; color: var(--text-secondary); margin-bottom: 12px; font-weight: 500;">
+                    ⏳ Ожидают оплаты
+                </h2>
+                <div class="services-grid">
+                    ${lockingBookings.map(booking => renderLockingBookingCard(booking)).join('')}
+                </div>
+            </div>
+        ` : ''}
+
+        ${completedBookings.length > 0 ? `
+            ${lockingBookings.length > 0 ? `
+                <h2 style="font-size: 16px; color: var(--text-secondary); margin-bottom: 12px; font-weight: 500;">
+                    ✅ Подтверждённые записи
+                </h2>
+            ` : ''}
             <div class="services-grid fade-in">
-                ${bookings.map(booking => `
+                ${completedBookings.map(booking => `
                     <div class="service-card glass-card">
                         <div class="service-header">
                             <div class="service-icon">📅</div>
                             <div class="service-info">
                                 <div class="service-name">${escapeHtml(booking.service)}</div>
-                                <div class="service-duration">${booking.date} в ${booking.time}</div>
+                                <div class="service-duration">${escapeHtml(booking.date)} в ${escapeHtml(booking.time)}</div>
                             </div>
                         </div>
                         ${booking.zoom_link ? `
                             <div class="service-description">
-                                <a href="${booking.zoom_link}" class="zoom-link" target="_blank">
+                                <a href="${escapeHtml(booking.zoom_link)}" class="zoom-link" target="_blank">
                                     Ссылка на Zoom
                                 </a>
                             </div>
                         ` : ''}
                         <div class="service-footer">
-                            <button class="service-btn" onclick="cancelBooking('${booking.id}')">
+                            <button class="service-btn" onclick="cancelBooking('${escapeHtml(booking.id)}')">
                                 Отменить запись
                             </button>
                         </div>
                     </div>
                 `).join('')}
             </div>
-        ` : State.isLoadingBookings ? `
+        ` : (bookings.length === 0 && !State.isLoadingBookings) ? `
+            <div class="loader-container">
+                <p>У вас пока нет записей</p>
+            </div>
+        ` : ''}
+
+        ${State.isLoadingBookings ? `
             <div class="bookings-loading">
                 <div class="bookings-spinner"></div>
                 <span>Загрузка записей...</span>
             </div>
-        ` : `
-            <div class="loader-container">
-                <p>У вас пока нет записей</p>
-            </div>
-        `}
+        ` : ''}
     `;
-    
+
     document.getElementById('app').innerHTML = html;
 }
 
@@ -1395,12 +1473,18 @@ function selectSlot(time) {
     }
 }
 
+/**
+ * [T-003] Подтверждение бронирования с поддержкой платных услуг
+ * Для платных услуг (price > 0): создаёт платёж через YooKassa
+ * Для бесплатных услуг (price === 0): прямое бронирование через Make.com
+ * @returns {Promise<void>}
+ */
 async function confirmBooking() {
     if (!State.selectedService || !State.selectedDate || !State.selectedSlot) {
         tg.showAlert('Пожалуйста, выберите услугу, дату и время');
         return;
     }
-    
+
     const service = getServiceById(State.selectedService);
     const confirmed = confirm(
         `Подтвердить запись?\n\n` +
@@ -1408,10 +1492,59 @@ async function confirmBooking() {
         `Дата: ${State.selectedDate}\n` +
         `Время: ${State.selectedSlot}`
     );
-    
+
     if (!confirmed) return;
-    
+
+    // [T-003] Проверяем является ли услуга платной
+    const price = CONFIG.SERVICE_PRICES[State.selectedService];
+    const isPaidService = price && price > 0;
+
+    // [T-003] Для платных услуг - создаём платёж через YooKassa
+    if (isPaidService) {
+        try {
+            // Находим слот в availableSlots чтобы получить slot.id
+            const slot = State.availableSlots.find(s => s.time === State.selectedSlot);
+            if (!slot || !slot.id) {
+                console.error('❌ [confirmBooking] Слот не найден в availableSlots:', State.selectedSlot);
+                tg.showAlert('Слот не найден. Попробуйте выбрать другое время.');
+                return;
+            }
+
+            console.log(`💳 [confirmBooking] Платная услуга (${price} ₽) - создание платежа для слота ${slot.id}`);
+
+            // Создаём платёж (функция уже показывает loader)
+            const paymentUrl = await createPayment(slot.id, State.selectedService);
+
+            // Инвалидируем кеш (слот будет переведён в locking)
+            console.log('🗑️ Инвалидация кеша после создания платежа...');
+            CacheManager.clear(`bookings_${USER.id}`); // Список бронирований изменился
+            CacheManager.clear('slots_json'); // [T-002] Слот удалён из slots.json
+            CacheManager.clearPattern('dates_'); // Доступные даты могли измениться
+            CacheManager.clearPattern('slots_'); // Слоты изменились
+
+            // НЕ очищаем State - пользователь может вернуться и оплатить позже
+            // НЕ переключаемся на mybookings - пользователь сам вернётся после оплаты
+
+            if (tg.HapticFeedback) {
+                tg.HapticFeedback.notificationOccurred('success');
+            }
+
+            // Показываем уведомление (paymentUrl может быть null для бесплатных услуг)
+            if (paymentUrl) {
+                tg.showAlert('Платёж создан. Завершите оплату для подтверждения бронирования.');
+            }
+
+        } catch (error) {
+            console.error('❌ [confirmBooking] Ошибка создания платежа:', error);
+            // Ошибка уже показана в createPayment()
+        }
+        return;
+    }
+
+    // [T-003] Для бесплатных услуг - прямое бронирование (старая логика)
     try {
+        console.log(`✅ [confirmBooking] Бесплатная услуга - прямое бронирование`);
+
         showLoader();
         const result = await BookingAPI.bookSlot(
             State.selectedService,
@@ -1419,7 +1552,7 @@ async function confirmBooking() {
             State.selectedSlot
         );
         hideLoader();
-        
+
         if (result.success) {
             tg.showAlert('Запись успешно создана!');
 
