@@ -374,7 +374,8 @@ const State = {
     bookingsLoadTimeout: null,  // Для debounce загрузки записей
     selectDateDebounceTimer: null,  // 🔧 HOTFIX v20: Debounce для быстрых кликов по датам
     isAppActive: true,  // 🔧 ИСПРАВЛЕНИЕ 1: Флаг активности приложения
-    isPopupOpen: false  // 🔧 FIX: Флаг открытого popup (предотвращает "Popup is already opened")
+    isPopupOpen: false,  // 🔧 FIX: Флаг открытого popup (предотвращает "Popup is already opened")
+    isSelectingSlot: false  // [T-003] Флаг выбора слота (защита от двойного клика)
 };
 
 // 🔧 ИСПРАВЛЕНИЕ 2: Обработка visibility change для корректной работы при выходе/входе
@@ -1598,13 +1599,30 @@ async function selectDate(dateStr) {
     }, 150); // 150ms debounce - баланс между отзывчивостью и экономией запросов
 }
 
+/**
+ * [T-003] Выбор слота с защитой от двойного клика
+ * @param {string} time - Время слота в формате "HH:MM"
+ */
 function selectSlot(time) {
+    // Защита от двойного клика
+    if (State.isSelectingSlot) {
+        console.log('⚠️ [selectSlot] Слот уже выбирается, игнорируем повторный клик');
+        return;
+    }
+
+    State.isSelectingSlot = true;
     State.selectedSlot = time;
-    renderBookingScreen();
-    
+
     if (tg.HapticFeedback) {
         tg.HapticFeedback.impactOccurred('medium');
     }
+
+    renderBookingScreen();
+
+    // Сбрасываем флаг после завершения рендеринга
+    setTimeout(() => {
+        State.isSelectingSlot = false;
+    }, 300);
 }
 
 /**
@@ -1618,16 +1636,6 @@ async function confirmBooking() {
         tg.showAlert('Пожалуйста, выберите услугу, дату и время');
         return;
     }
-
-    const service = getServiceById(State.selectedService);
-    const confirmed = confirm(
-        `Подтвердить запись?\n\n` +
-        `Услуга: ${service ? service.name : State.selectedService}\n` +
-        `Дата: ${State.selectedDate}\n` +
-        `Время: ${State.selectedSlot}`
-    );
-
-    if (!confirmed) return;
 
     // [T-003] Проверяем является ли услуга платной
     const price = CONFIG.SERVICE_PRICES[State.selectedService];
