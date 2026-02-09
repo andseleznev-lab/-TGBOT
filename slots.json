@@ -1,6 +1,986 @@
 {
-  "generated_at": "2026-02-09T10:07:10.000Z",
+  "generated_at": "2026-02-09T10:12:28.000Z",
   "slots": [
+	{
+		"id": "pslot_47",
+		"date": "10.02.2026",
+		"time": "10:00",
+		"status": "free",
+		"service": "package"
+	},
+	{
+		"id": "pslot_48",
+		"date": "10.02.2026",
+		"time": "12:00",
+		"status": "free",
+		"service": "package"
+	},
+	{
+		"id": "pslot_49",
+		"date": "10.02.2026",
+		"time": "14:00",
+		"status": "free",
+		"service": "package"
+	},
+	{
+		"id": "pslot_50",
+		"date": "10.02.2026",
+		"time": "16:00",
+		"status": "free",
+		"service": "package"
+	},
+	{
+		"id": "pslot_51",
+		"date": "10.02.2026",
+		"time": "18:00",
+		"status": "free",
+		"service": "package"
+	},
+	{
+		"id": "fslot_52",
+		"date": "10.02.2026",
+		"time": "10:00",
+		"status": "free",
+		"service": "family"
+	},
+	{
+		"id": "fslot_53",
+		"date": "10.02.2026",
+		"time": "12:00",
+		"status": "free",
+		"service": "family"
+	},
+	{
+		"id": "fslot_54",
+		"date": "10.02.2026",
+		"time": "14:00",
+		"status": "free",
+		"service": "family"
+	},
+	{
+		"id": "fslot_55",
+		"date": "10.02.2026",
+		"time": "16:00",
+		"status": "free",
+		"service": "family"
+	},
+	{
+		"id": "fslot_56",
+		"date": "10.02.2026",
+		"time": "18:00",
+		"status": "free",
+		"service": "family"
+	},
+	{
+		"id": "sslot_57",
+		"date": "10.02.2026",
+		"time": "10:00",
+		"status": "free",
+		"service": "single"
+	},
+	{
+		"id": "sslot_58",
+		"date": "10.02.2026",
+		"time": "12:00",
+		"status": "free",
+		"service": "single"
+	},
+	{
+		"id": "sslot_59",
+		"date": "10.02.2026",
+		"time": "14:00",
+		"status": "free",
+		"service": "single"
+	},
+	{
+		"id": "sslot_60",
+		"date": "10.02.2026",
+		"time": "16:00",
+		"status": "free",
+		"service": "single"
+	},
+	{
+		"id": "sslot_61",
+		"date": "10.02.2026",
+		"time": "18:00",
+		"status": "free",
+		"service": "single"
+	},
+	{
+		"id": "dslot_62",
+		"date": "11.02.2026",
+		"time": "10:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "dslot_63",
+		"date": "11.02.2026",
+		"time": "11:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "dslot_64",
+		"date": "11.02.2026",
+		"time": "12:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "dslot_65",
+		"date": "11.02.2026",
+		"time": "13:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "dslot_66",
+		"date": "11.02.2026",
+		"time": "14:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "dslot_67",
+		"date": "11.02.2026",
+		"time": "15:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "dslot_68",
+		"date": "11.02.2026",
+		"time": "16:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "dslot_69",
+		"date": "11.02.2026",
+		"time": "17:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "pslot_70",
+		"date": "12.02.2026",
+		"time": "10:00",
+		"status": "free",
+		"service": "package"
+	},
+	{
+		"id": "pslot_71",
+		"date": "12.02.2026",
+		"time": "12:00",
+		"status": "free",
+		"service": "package"
+	},
+	{
+		"id": "pslot_72",
+		"date": "12.02.2026",
+		"time": "14:00",
+		"status": "free",
+		"service": "package"
+	},
+	{
+		"id": "pslot_73",
+		"date": "12.02.2026",
+		"time": "16:00",
+		"status": "free",
+		"service": "package"
+	},
+	{
+		"id": "pslot_74",
+		"date": "12.02.2026",
+		"time": "18:00",
+		"status": "free",
+		"service": "package"
+	},
+	{
+		"id": "fslot_75",
+		"date": "12.02.2026",
+		"time": "10:00",
+		"status": "free",
+		"service": "family"
+	},
+	{
+		"id": "fslot_76",
+		"date": "12.02.2026",
+		"time": "12:00",
+		"status": "free",
+		"service": "family"
+	},
+	{
+		"id": "fslot_77",
+		"date": "12.02.2026",
+		"time": "14:00",
+		"status": "free",
+		"service": "family"
+	},
+	{
+		"id": "fslot_78",
+		"date": "12.02.2026",
+		"time": "16:00",
+		"status": "free",
+		"service": "family"
+	},
+	{
+		"id": "fslot_79",
+		"date": "12.02.2026",
+		"time": "18:00",
+		"status": "free",
+		"service": "family"
+	},
+	{
+		"id": "sslot_80",
+		"date": "12.02.2026",
+		"time": "10:00",
+		"status": "free",
+		"service": "single"
+	},
+	{
+		"id": "sslot_81",
+		"date": "12.02.2026",
+		"time": "12:00",
+		"status": "free",
+		"service": "single"
+	},
+	{
+		"id": "sslot_82",
+		"date": "12.02.2026",
+		"time": "14:00",
+		"status": "free",
+		"service": "single"
+	},
+	{
+		"id": "sslot_83",
+		"date": "12.02.2026",
+		"time": "16:00",
+		"status": "free",
+		"service": "single"
+	},
+	{
+		"id": "sslot_84",
+		"date": "12.02.2026",
+		"time": "18:00",
+		"status": "free",
+		"service": "single"
+	},
+	{
+		"id": "dslot_85",
+		"date": "13.02.2026",
+		"time": "10:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "dslot_86",
+		"date": "13.02.2026",
+		"time": "11:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "dslot_87",
+		"date": "13.02.2026",
+		"time": "12:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "dslot_88",
+		"date": "13.02.2026",
+		"time": "13:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "dslot_89",
+		"date": "13.02.2026",
+		"time": "14:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "dslot_90",
+		"date": "13.02.2026",
+		"time": "15:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "dslot_91",
+		"date": "13.02.2026",
+		"time": "16:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "dslot_92",
+		"date": "13.02.2026",
+		"time": "17:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "pslot_93",
+		"date": "17.02.2026",
+		"time": "10:00",
+		"status": "free",
+		"service": "package"
+	},
+	{
+		"id": "pslot_94",
+		"date": "17.02.2026",
+		"time": "12:00",
+		"status": "free",
+		"service": "package"
+	},
+	{
+		"id": "pslot_95",
+		"date": "17.02.2026",
+		"time": "14:00",
+		"status": "free",
+		"service": "package"
+	},
+	{
+		"id": "pslot_96",
+		"date": "17.02.2026",
+		"time": "16:00",
+		"status": "free",
+		"service": "package"
+	},
+	{
+		"id": "pslot_97",
+		"date": "17.02.2026",
+		"time": "18:00",
+		"status": "free",
+		"service": "package"
+	},
+	{
+		"id": "fslot_98",
+		"date": "17.02.2026",
+		"time": "10:00",
+		"status": "free",
+		"service": "family"
+	},
+	{
+		"id": "fslot_99",
+		"date": "17.02.2026",
+		"time": "12:00",
+		"status": "free",
+		"service": "family"
+	},
+	{
+		"id": "fslot_100",
+		"date": "17.02.2026",
+		"time": "14:00",
+		"status": "free",
+		"service": "family"
+	},
+	{
+		"id": "fslot_101",
+		"date": "17.02.2026",
+		"time": "16:00",
+		"status": "free",
+		"service": "family"
+	},
+	{
+		"id": "fslot_102",
+		"date": "17.02.2026",
+		"time": "18:00",
+		"status": "free",
+		"service": "family"
+	},
+	{
+		"id": "sslot_103",
+		"date": "17.02.2026",
+		"time": "10:00",
+		"status": "free",
+		"service": "single"
+	},
+	{
+		"id": "sslot_104",
+		"date": "17.02.2026",
+		"time": "12:00",
+		"status": "free",
+		"service": "single"
+	},
+	{
+		"id": "sslot_105",
+		"date": "17.02.2026",
+		"time": "14:00",
+		"status": "free",
+		"service": "single"
+	},
+	{
+		"id": "sslot_106",
+		"date": "17.02.2026",
+		"time": "16:00",
+		"status": "free",
+		"service": "single"
+	},
+	{
+		"id": "sslot_107",
+		"date": "17.02.2026",
+		"time": "18:00",
+		"status": "free",
+		"service": "single"
+	},
+	{
+		"id": "dslot_108",
+		"date": "18.02.2026",
+		"time": "10:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "dslot_109",
+		"date": "18.02.2026",
+		"time": "11:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "dslot_110",
+		"date": "18.02.2026",
+		"time": "12:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "dslot_111",
+		"date": "18.02.2026",
+		"time": "13:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "dslot_112",
+		"date": "18.02.2026",
+		"time": "14:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "dslot_113",
+		"date": "18.02.2026",
+		"time": "15:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "dslot_114",
+		"date": "18.02.2026",
+		"time": "16:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "dslot_115",
+		"date": "18.02.2026",
+		"time": "17:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "pslot_116",
+		"date": "19.02.2026",
+		"time": "10:00",
+		"status": "free",
+		"service": "package"
+	},
+	{
+		"id": "pslot_117",
+		"date": "19.02.2026",
+		"time": "12:00",
+		"status": "free",
+		"service": "package"
+	},
+	{
+		"id": "pslot_118",
+		"date": "19.02.2026",
+		"time": "14:00",
+		"status": "free",
+		"service": "package"
+	},
+	{
+		"id": "pslot_119",
+		"date": "19.02.2026",
+		"time": "16:00",
+		"status": "free",
+		"service": "package"
+	},
+	{
+		"id": "pslot_120",
+		"date": "19.02.2026",
+		"time": "18:00",
+		"status": "free",
+		"service": "package"
+	},
+	{
+		"id": "fslot_121",
+		"date": "19.02.2026",
+		"time": "10:00",
+		"status": "free",
+		"service": "family"
+	},
+	{
+		"id": "fslot_122",
+		"date": "19.02.2026",
+		"time": "12:00",
+		"status": "free",
+		"service": "family"
+	},
+	{
+		"id": "fslot_123",
+		"date": "19.02.2026",
+		"time": "14:00",
+		"status": "free",
+		"service": "family"
+	},
+	{
+		"id": "fslot_124",
+		"date": "19.02.2026",
+		"time": "16:00",
+		"status": "free",
+		"service": "family"
+	},
+	{
+		"id": "fslot_125",
+		"date": "19.02.2026",
+		"time": "18:00",
+		"status": "free",
+		"service": "family"
+	},
+	{
+		"id": "sslot_126",
+		"date": "19.02.2026",
+		"time": "10:00",
+		"status": "free",
+		"service": "single"
+	},
+	{
+		"id": "sslot_127",
+		"date": "19.02.2026",
+		"time": "12:00",
+		"status": "free",
+		"service": "single"
+	},
+	{
+		"id": "sslot_128",
+		"date": "19.02.2026",
+		"time": "14:00",
+		"status": "free",
+		"service": "single"
+	},
+	{
+		"id": "sslot_129",
+		"date": "19.02.2026",
+		"time": "16:00",
+		"status": "free",
+		"service": "single"
+	},
+	{
+		"id": "sslot_130",
+		"date": "19.02.2026",
+		"time": "18:00",
+		"status": "free",
+		"service": "single"
+	},
+	{
+		"id": "dslot_131",
+		"date": "20.02.2026",
+		"time": "10:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "dslot_132",
+		"date": "20.02.2026",
+		"time": "11:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "dslot_133",
+		"date": "20.02.2026",
+		"time": "12:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "dslot_134",
+		"date": "20.02.2026",
+		"time": "13:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "dslot_135",
+		"date": "20.02.2026",
+		"time": "14:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "dslot_136",
+		"date": "20.02.2026",
+		"time": "15:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "dslot_137",
+		"date": "20.02.2026",
+		"time": "16:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "dslot_138",
+		"date": "20.02.2026",
+		"time": "17:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "pslot_139",
+		"date": "24.02.2026",
+		"time": "10:00",
+		"status": "free",
+		"service": "package"
+	},
+	{
+		"id": "pslot_140",
+		"date": "24.02.2026",
+		"time": "12:00",
+		"status": "free",
+		"service": "package"
+	},
+	{
+		"id": "pslot_141",
+		"date": "24.02.2026",
+		"time": "14:00",
+		"status": "free",
+		"service": "package"
+	},
+	{
+		"id": "pslot_142",
+		"date": "24.02.2026",
+		"time": "16:00",
+		"status": "free",
+		"service": "package"
+	},
+	{
+		"id": "pslot_143",
+		"date": "24.02.2026",
+		"time": "18:00",
+		"status": "free",
+		"service": "package"
+	},
+	{
+		"id": "fslot_144",
+		"date": "24.02.2026",
+		"time": "10:00",
+		"status": "free",
+		"service": "family"
+	},
+	{
+		"id": "fslot_145",
+		"date": "24.02.2026",
+		"time": "12:00",
+		"status": "free",
+		"service": "family"
+	},
+	{
+		"id": "fslot_146",
+		"date": "24.02.2026",
+		"time": "14:00",
+		"status": "free",
+		"service": "family"
+	},
+	{
+		"id": "fslot_147",
+		"date": "24.02.2026",
+		"time": "16:00",
+		"status": "free",
+		"service": "family"
+	},
+	{
+		"id": "fslot_148",
+		"date": "24.02.2026",
+		"time": "18:00",
+		"status": "free",
+		"service": "family"
+	},
+	{
+		"id": "sslot_149",
+		"date": "24.02.2026",
+		"time": "10:00",
+		"status": "free",
+		"service": "single"
+	},
+	{
+		"id": "sslot_150",
+		"date": "24.02.2026",
+		"time": "12:00",
+		"status": "free",
+		"service": "single"
+	},
+	{
+		"id": "sslot_151",
+		"date": "24.02.2026",
+		"time": "14:00",
+		"status": "free",
+		"service": "single"
+	},
+	{
+		"id": "sslot_152",
+		"date": "24.02.2026",
+		"time": "16:00",
+		"status": "free",
+		"service": "single"
+	},
+	{
+		"id": "sslot_153",
+		"date": "24.02.2026",
+		"time": "18:00",
+		"status": "free",
+		"service": "single"
+	},
+	{
+		"id": "dslot_154",
+		"date": "25.02.2026",
+		"time": "10:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "dslot_155",
+		"date": "25.02.2026",
+		"time": "11:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "dslot_156",
+		"date": "25.02.2026",
+		"time": "12:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "dslot_157",
+		"date": "25.02.2026",
+		"time": "13:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "dslot_158",
+		"date": "25.02.2026",
+		"time": "14:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "dslot_159",
+		"date": "25.02.2026",
+		"time": "15:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "dslot_160",
+		"date": "25.02.2026",
+		"time": "16:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "dslot_161",
+		"date": "25.02.2026",
+		"time": "17:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "pslot_162",
+		"date": "26.02.2026",
+		"time": "10:00",
+		"status": "free",
+		"service": "package"
+	},
+	{
+		"id": "pslot_163",
+		"date": "26.02.2026",
+		"time": "12:00",
+		"status": "free",
+		"service": "package"
+	},
+	{
+		"id": "pslot_164",
+		"date": "26.02.2026",
+		"time": "14:00",
+		"status": "free",
+		"service": "package"
+	},
+	{
+		"id": "pslot_165",
+		"date": "26.02.2026",
+		"time": "16:00",
+		"status": "free",
+		"service": "package"
+	},
+	{
+		"id": "pslot_166",
+		"date": "26.02.2026",
+		"time": "18:00",
+		"status": "free",
+		"service": "package"
+	},
+	{
+		"id": "fslot_167",
+		"date": "26.02.2026",
+		"time": "10:00",
+		"status": "free",
+		"service": "family"
+	},
+	{
+		"id": "fslot_168",
+		"date": "26.02.2026",
+		"time": "12:00",
+		"status": "free",
+		"service": "family"
+	},
+	{
+		"id": "fslot_169",
+		"date": "26.02.2026",
+		"time": "14:00",
+		"status": "free",
+		"service": "family"
+	},
+	{
+		"id": "fslot_170",
+		"date": "26.02.2026",
+		"time": "16:00",
+		"status": "free",
+		"service": "family"
+	},
+	{
+		"id": "fslot_171",
+		"date": "26.02.2026",
+		"time": "18:00",
+		"status": "free",
+		"service": "family"
+	},
+	{
+		"id": "sslot_172",
+		"date": "26.02.2026",
+		"time": "10:00",
+		"status": "free",
+		"service": "single"
+	},
+	{
+		"id": "sslot_173",
+		"date": "26.02.2026",
+		"time": "12:00",
+		"status": "free",
+		"service": "single"
+	},
+	{
+		"id": "sslot_174",
+		"date": "26.02.2026",
+		"time": "14:00",
+		"status": "free",
+		"service": "single"
+	},
+	{
+		"id": "sslot_175",
+		"date": "26.02.2026",
+		"time": "16:00",
+		"status": "free",
+		"service": "single"
+	},
+	{
+		"id": "sslot_176",
+		"date": "26.02.2026",
+		"time": "18:00",
+		"status": "free",
+		"service": "single"
+	},
+	{
+		"id": "dslot_177",
+		"date": "27.02.2026",
+		"time": "10:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "dslot_178",
+		"date": "27.02.2026",
+		"time": "11:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "dslot_179",
+		"date": "27.02.2026",
+		"time": "12:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "dslot_180",
+		"date": "27.02.2026",
+		"time": "13:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "dslot_181",
+		"date": "27.02.2026",
+		"time": "14:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "dslot_182",
+		"date": "27.02.2026",
+		"time": "15:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "dslot_183",
+		"date": "27.02.2026",
+		"time": "16:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "dslot_184",
+		"date": "27.02.2026",
+		"time": "17:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "pslot_185",
+		"date": "03.03.2026",
+		"time": "10:00",
+		"status": "free",
+		"service": "package"
+	},
+	{
+		"id": "pslot_186",
+		"date": "03.03.2026",
+		"time": "12:00",
+		"status": "free",
+		"service": "package"
+	},
 	{
 		"id": "pslot_187",
 		"date": "03.03.2026",
