@@ -170,10 +170,8 @@ async function createPayment(slotId, serviceId) {
 
         console.log('✅ [createPayment] Платёж создан, URL получен');
 
-        // Открываем окно оплаты
-        openPaymentWindow(result.payment_url);
-
-        return result.payment_url;
+        // Возвращаем полный результат (для модального окна)
+        return result;
 
     } catch (error) {
         hideLoader();
@@ -218,6 +216,142 @@ function openPaymentWindow(paymentUrl) {
             tg.HapticFeedback.notificationOccurred('error');
         }
         tg.showAlert('Не удалось открыть окно оплаты');
+    }
+}
+
+/**
+ * [T-003] Показывает модальное окно подтверждения оплаты
+ * @param {Object} paymentData - Данные платежа
+ * @param {string} paymentData.payment_url - URL страницы оплаты YooKassa
+ * @param {string} paymentData.payment_id - ID платежа
+ * @param {string} paymentData.service - ID услуги
+ * @param {string} paymentData.date - Дата бронирования
+ * @param {string} paymentData.time - Время бронирования
+ * @param {number} paymentData.price - Сумма оплаты
+ * @returns {void}
+ */
+function showPaymentConfirmModal(paymentData) {
+    try {
+        console.log('💳 [showPaymentConfirmModal] Показ модального окна:', paymentData);
+
+        // Haptic feedback
+        if (tg.HapticFeedback) {
+            tg.HapticFeedback.impactOccurred('light');
+        }
+
+        // Получаем название услуги
+        const service = getServiceById(paymentData.service);
+        const serviceName = service ? service.name : 'Консультация';
+
+        // Форматируем сумму
+        const formattedPrice = paymentData.price.toLocaleString('ru-RU');
+
+        // Создаём HTML модального окна
+        const modalHTML = `
+            <div class="payment-modal-overlay" id="paymentModalOverlay">
+                <div class="payment-modal">
+                    <div class="payment-modal-header">
+                        <span>💳</span>
+                        <h2>Подтверждение оплаты</h2>
+                    </div>
+                    <div class="payment-modal-body">
+                        <div class="payment-detail">
+                            <div class="payment-detail-label">Услуга</div>
+                            <div class="payment-detail-value">${serviceName}</div>
+                        </div>
+                        <div class="payment-detail">
+                            <div class="payment-detail-label">Дата и время</div>
+                            <div class="payment-detail-value">${paymentData.date}, ${paymentData.time}</div>
+                        </div>
+                        <div class="payment-amount">
+                            <div class="payment-amount-label">Сумма к оплате</div>
+                            <div class="payment-amount-value">${formattedPrice} ₽</div>
+                        </div>
+                    </div>
+                    <div class="payment-modal-footer">
+                        <button class="payment-modal-button payment-modal-button-primary" id="paymentConfirmBtn">
+                            Оплатить ${formattedPrice} ₽
+                        </button>
+                        <button class="payment-modal-button payment-modal-button-secondary" id="paymentCancelBtn">
+                            Отмена
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Добавляем модалку в DOM
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+        // Получаем элементы
+        const overlay = document.getElementById('paymentModalOverlay');
+        const confirmBtn = document.getElementById('paymentConfirmBtn');
+        const cancelBtn = document.getElementById('paymentCancelBtn');
+
+        // Функция закрытия модалки
+        const closeModal = () => {
+            console.log('🚪 [showPaymentConfirmModal] Закрытие модального окна');
+
+            overlay.classList.add('closing');
+            setTimeout(() => {
+                overlay.remove();
+            }, 300); // Время анимации fadeOut
+        };
+
+        // Обработчик кнопки "Оплатить"
+        confirmBtn.addEventListener('click', () => {
+            console.log('✅ [showPaymentConfirmModal] Нажата кнопка "Оплатить"');
+
+            // Haptic feedback
+            if (tg.HapticFeedback) {
+                tg.HapticFeedback.notificationOccurred('success');
+            }
+
+            // Закрываем модалку
+            closeModal();
+
+            // Открываем окно оплаты
+            openPaymentWindow(paymentData.payment_url);
+
+            // Инвалидируем кеш (слот переведён в locking)
+            console.log('🗑️ Инвалидация кеша после подтверждения оплаты...');
+            CacheManager.clear(`bookings_${USER.id}`);
+            CacheManager.clear('slots_json');
+            CacheManager.clearPattern('dates_');
+            CacheManager.clearPattern('slots_');
+        });
+
+        // Обработчик кнопки "Отмена"
+        cancelBtn.addEventListener('click', () => {
+            console.log('❌ [showPaymentConfirmModal] Нажата кнопка "Отмена"');
+
+            // Haptic feedback
+            if (tg.HapticFeedback) {
+                tg.HapticFeedback.impactOccurred('light');
+            }
+
+            closeModal();
+        });
+
+        // Обработчик клика вне модалки (на overlay)
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                console.log('🚪 [showPaymentConfirmModal] Клик вне модалки - закрытие');
+
+                // Haptic feedback
+                if (tg.HapticFeedback) {
+                    tg.HapticFeedback.impactOccurred('light');
+                }
+
+                closeModal();
+            }
+        });
+
+        console.log('✅ [showPaymentConfirmModal] Модальное окно показано');
+
+    } catch (error) {
+        console.error('❌ [showPaymentConfirmModal] Ошибка показа модального окна:', error);
+        tg.showAlert('Не удалось показать окно подтверждения');
     }
 }
 
@@ -1513,26 +1647,23 @@ async function confirmBooking() {
             console.log(`💳 [confirmBooking] Платная услуга (${price} ₽) - создание платежа для слота ${slot.id}`);
 
             // Создаём платёж (функция уже показывает loader)
-            const paymentUrl = await createPayment(slot.id, State.selectedService);
+            const paymentResult = await createPayment(slot.id, State.selectedService);
 
-            // Инвалидируем кеш (слот будет переведён в locking)
-            console.log('🗑️ Инвалидация кеша после создания платежа...');
-            CacheManager.clear(`bookings_${USER.id}`); // Список бронирований изменился
-            CacheManager.clear('slots_json'); // [T-002] Слот удалён из slots.json
-            CacheManager.clearPattern('dates_'); // Доступные даты могли измениться
-            CacheManager.clearPattern('slots_'); // Слоты изменились
+            // Показываем модальное окно подтверждения оплаты
+            if (paymentResult && paymentResult.payment_url) {
+                showPaymentConfirmModal({
+                    payment_url: paymentResult.payment_url,
+                    payment_id: paymentResult.payment_id,
+                    service: State.selectedService,
+                    date: State.selectedDate,
+                    time: State.selectedSlot,
+                    price: price
+                });
+            }
 
             // НЕ очищаем State - пользователь может вернуться и оплатить позже
             // НЕ переключаемся на mybookings - пользователь сам вернётся после оплаты
-
-            if (tg.HapticFeedback) {
-                tg.HapticFeedback.notificationOccurred('success');
-            }
-
-            // Показываем уведомление (paymentUrl может быть null для бесплатных услуг)
-            if (paymentUrl) {
-                tg.showAlert('Платёж создан. Завершите оплату для подтверждения бронирования.');
-            }
+            // НЕ инвалидируем кеш здесь - это делается в модалке при нажатии "Оплатить"
 
         } catch (error) {
             console.error('❌ [confirmBooking] Ошибка создания платежа:', error);
