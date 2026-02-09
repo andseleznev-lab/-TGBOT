@@ -1,20 +1,6 @@
 {
-  "generated_at": "2026-02-09T10:12:28.000Z",
+  "generated_at": "2026-02-09T10:16:26.000Z",
   "slots": [
-	{
-		"id": "pslot_47",
-		"date": "10.02.2026",
-		"time": "10:00",
-		"status": "free",
-		"service": "package"
-	},
-	{
-		"id": "pslot_48",
-		"date": "10.02.2026",
-		"time": "12:00",
-		"status": "free",
-		"service": "package"
-	},
 	{
 		"id": "pslot_49",
 		"date": "10.02.2026",
