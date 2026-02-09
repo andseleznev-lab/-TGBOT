@@ -1,13 +1,6 @@
 {
-  "generated_at": "2026-02-09T10:06:52.000Z",
+  "generated_at": "2026-02-09T10:06:54.000Z",
   "slots": [
-	{
-		"id": "dslot_178",
-		"date": "27.02.2026",
-		"time": "11:00",
-		"status": "free",
-		"service": "diagnosis"
-	},
 	{
 		"id": "dslot_179",
 		"date": "27.02.2026",
