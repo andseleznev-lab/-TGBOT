@@ -111,7 +111,7 @@ function renderLockingSlot(slot) {
             <div>${slot.time}</div>
             <div class="payment-timer">${timerText}</div>
             ${isOwnSlot && !remaining.isExpired ? `
-                <button class="payment-btn" onclick="event.stopPropagation(); createPayment('${slot.id}', '${State.selectedService}')">
+                <button class="payment-btn" onclick="event.stopPropagation(); handlePaymentFromBooking('${slot.id}', '${State.selectedService}', '${slot.date || State.selectedDate}', '${slot.time}')">
                     Оплатить
                 </button>
             ` : ''}
@@ -176,6 +176,12 @@ async function createPayment(slotId, serviceId) {
     } catch (error) {
         hideLoader();
         console.error('❌ [createPayment] Ошибка создания платежа:', error);
+
+        // Не показываем ошибку если запрос был отменён (race condition)
+        if (error.isCancelled) {
+            console.log('ℹ️ [createPayment] Запрос отменён - не показываем ошибку пользователю');
+            throw error;
+        }
 
         // Показываем понятное сообщение пользователю
         if (tg.HapticFeedback) {
@@ -355,6 +361,72 @@ function showPaymentConfirmModal(paymentData) {
     }
 }
 
+/**
+ * [T-003] Обработчик оплаты из карточки бронирования (таб "Мои записи") или locking слота
+ * Показывает loading modal, создаёт платёж и открывает модальное окно подтверждения
+ * @param {string} bookingId - ID слота бронирования
+ * @param {string} serviceId - ID услуги (diagnosis, package, family, single)
+ * @param {string|null} dateOverride - Опциональная дата слота (если вызывается не из карточки бронирования)
+ * @param {string|null} timeOverride - Опциональное время слота (если вызывается не из карточки бронирования)
+ * @returns {Promise<void>}
+ */
+async function handlePaymentFromBooking(bookingId, serviceId, dateOverride = null, timeOverride = null) {
+    // Защита от двойного клика
+    if (State.isCreatingPayment) {
+        console.log('⚠️ [handlePaymentFromBooking] Платёж уже создаётся - игнорируем клик');
+        return;
+    }
+
+    State.isCreatingPayment = true;
+
+    try {
+        console.log(`💳 [handlePaymentFromBooking] Начало оплаты для слота ${bookingId}`);
+
+        // Показываем loading modal
+        showLoadingModal('Создание платежа...');
+
+        // Создаём платёж
+        const paymentResult = await createPayment(bookingId, serviceId);
+
+        // Скрываем loading modal
+        hideLoadingModal();
+
+        // Если платёж создан - показываем модальное окно подтверждения
+        if (paymentResult && paymentResult.payment_url) {
+            // Получаем данные бронирования из State или используем переданные параметры
+            const booking = State.userBookings.find(b => b.id === bookingId);
+            const date = dateOverride || (booking ? booking.date : State.selectedDate);
+            const time = timeOverride || (booking ? booking.time : State.selectedSlot);
+
+            if (!date || !time) {
+                throw new Error('Не удалось определить дату и время слота');
+            }
+
+            const price = CONFIG.SERVICE_PRICES[serviceId] || 0;
+
+            showPaymentConfirmModal({
+                payment_url: paymentResult.payment_url,
+                payment_id: paymentResult.payment_id,
+                service: serviceId,
+                date: date,
+                time: time,
+                price: price
+            });
+        }
+
+    } catch (error) {
+        // Скрываем loading modal в случае ошибки
+        hideLoadingModal();
+
+        // Ошибка уже залогирована в createPayment(), просто пробрасываем
+        console.error('❌ [handlePaymentFromBooking] Ошибка обработки оплаты:', error);
+
+    } finally {
+        // Всегда снимаем флаг в конце
+        State.isCreatingPayment = false;
+    }
+}
+
 // ===== ГЛОБАЛЬНОЕ СОСТОЯНИЕ ПРИЛОЖЕНИЯ =====
 const State = {
     currentTab: 'services',
@@ -375,7 +447,8 @@ const State = {
     selectDateDebounceTimer: null,  // 🔧 HOTFIX v20: Debounce для быстрых кликов по датам
     isAppActive: true,  // 🔧 ИСПРАВЛЕНИЕ 1: Флаг активности приложения
     isPopupOpen: false,  // 🔧 FIX: Флаг открытого popup (предотвращает "Popup is already opened")
-    isSelectingSlot: false  // [T-003] Флаг выбора слота (защита от двойного клика)
+    isSelectingSlot: false,  // [T-003] Флаг выбора слота (защита от двойного клика)
+    isCreatingPayment: false  // [T-003] Флаг создания платежа (защита от двойного клика из карточки бронирования)
 };
 
 // 🔧 ИСПРАВЛЕНИЕ 2: Обработка visibility change для корректной работы при выходе/входе
@@ -1122,6 +1195,39 @@ function hideLoader() {
     tg.MainButton.hideProgress();
 }
 
+/**
+ * [T-003] Показывает модальное окно загрузки в glassmorphism стиле
+ * @param {string} message - Сообщение для отображения (например, "Создание платежа...")
+ */
+function showLoadingModal(message = 'Загрузка...') {
+    // Удаляем старую модалку если есть
+    hideLoadingModal();
+
+    const modalHTML = `
+        <div class="loading-modal-overlay" id="loadingModalOverlay">
+            <div class="loading-modal glass-card">
+                <div class="loading-spinner"></div>
+                <div class="loading-text">${escapeHtml(message)}</div>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+    console.log('⏳ [showLoadingModal] Показано окно загрузки:', message);
+}
+
+/**
+ * [T-003] Скрывает модальное окно загрузки
+ */
+function hideLoadingModal() {
+    const modal = document.getElementById('loadingModalOverlay');
+    if (modal) {
+        modal.remove();
+        console.log('✅ [hideLoadingModal] Окно загрузки скрыто');
+    }
+}
+
 // ===== РЕНДЕРИНГ ЭКРАНОВ =====
 
 // Экран услуг
@@ -1317,7 +1423,7 @@ function renderLockingBookingCard(booking) {
                     <button
                         class="payment-btn"
                         style="width: 100%; padding: 10px; font-size: 14px;"
-                        onclick="createPayment('${bookingId}', '${serviceId}')">
+                        onclick="handlePaymentFromBooking('${bookingId}', '${serviceId}')">
                         Оплатить ${price.toLocaleString('ru-RU')} ₽
                     </button>
                 ` : `
