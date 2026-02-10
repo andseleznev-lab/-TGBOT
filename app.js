@@ -436,6 +436,7 @@ const State = {
     selectedDate: null,
     availableSlots: [],
     selectedSlot: null,
+    selectedSlotId: null,  // ID выбранного слота (например "dslot_62")
     currentMonth: new Date(),
     isLoading: false,
     isLoadingSlots: false,  // 🔧 HOTFIX v20: Флаг загрузки слотов (для отображения loading в секции слотов)
@@ -761,12 +762,19 @@ class BookingAPI {
     // - getAvailableDates() → fetchSlotsFromGit() + getAvailableDatesFromSlots()
     // - getAvailableSlots() → fetchSlotsFromGit() + getAvailableSlotsForDate()
 
-    static async bookSlot(serviceName, date, time) {
-        return await this.request('book_slot', { 
-            service_name: serviceName, 
+    static async bookSlot(serviceName, date, time, slotId = null) {
+        const payload = {
+            service_name: serviceName,
             date: date,
             time: time
-        });
+        };
+
+        // Добавляем slot_id если передан (для диагностики и других услуг)
+        if (slotId) {
+            payload.slot_id = slotId;
+        }
+
+        return await this.request('book_slot', payload);
     }
     
     static async getUserBookings() {
@@ -1622,6 +1630,7 @@ async function onServiceSelect(serviceId) {
     State.selectedService = serviceId;
     State.selectedDate = null;
     State.selectedSlot = null;
+    State.selectedSlotId = null;
     State.availableSlots = [];
     State.availableDates = []; // 🔧 HOTFIX v19: Очищаем даты при смене услуги
     State.currentMonth = new Date();
@@ -1657,6 +1666,7 @@ async function selectDate(dateStr) {
 
     State.selectedDate = dateStr;
     State.selectedSlot = null;
+    State.selectedSlotId = null;
 
     // 🔧 HOTFIX v20: Проверяем есть ли кеш для этой даты
     const cacheKey = `slots_${State.selectedService}_${dateStr}`;
@@ -1718,6 +1728,11 @@ function selectSlot(time) {
 
     State.isSelectingSlot = true;
     State.selectedSlot = time;
+
+    // Находим слот по времени и сохраняем его ID
+    const slotObj = State.availableSlots.find(slot => slot.time === time);
+    State.selectedSlotId = slotObj ? slotObj.id : null;
+    console.log(`✅ [selectSlot] Выбран слот: time="${time}", id="${State.selectedSlotId}"`);
 
     if (tg.HapticFeedback) {
         tg.HapticFeedback.impactOccurred('medium');
@@ -1794,7 +1809,8 @@ async function confirmBooking() {
         const result = await BookingAPI.bookSlot(
             State.selectedService,
             State.selectedDate,
-            State.selectedSlot
+            State.selectedSlot,
+            State.selectedSlotId  // Передаём ID слота для вебхука
         );
         hideLoader();
 
@@ -1812,6 +1828,7 @@ async function confirmBooking() {
             State.selectedService = null;
             State.selectedDate = null;
             State.selectedSlot = null;
+            State.selectedSlotId = null;
             State.availableDates = [];
             State.availableSlots = [];
 
@@ -2452,6 +2469,7 @@ function switchTab(tabName) {
         State.selectedService = null;
         State.selectedDate = null;
         State.selectedSlot = null;
+        State.selectedSlotId = null;
         State.availableDates = [];
         State.availableSlots = [];
     }
