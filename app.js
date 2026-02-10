@@ -1784,8 +1784,14 @@ async function confirmBooking() {
 
             console.log(`💳 [confirmBooking] Платная услуга (${price} ₽) - создание платежа для слота ${slot.id}`);
 
-            // Создаём платёж (функция уже показывает loader)
+            // Показываем loading modal
+            showLoadingModal('Создание платежа...');
+
+            // Создаём платёж
             const paymentResult = await createPayment(slot.id, State.selectedService);
+
+            // Скрываем loading modal
+            hideLoadingModal();
 
             // Показываем модальное окно подтверждения оплаты
             if (paymentResult && paymentResult.payment_url) {
@@ -1804,6 +1810,7 @@ async function confirmBooking() {
             // НЕ инвалидируем кеш здесь - это делается в модалке при нажатии "Оплатить"
 
         } catch (error) {
+            hideLoadingModal(); // Скрываем loading modal при ошибке
             console.error('❌ [confirmBooking] Ошибка создания платежа:', error);
             tg.HapticFeedback.notificationOccurred('error');
             // Ошибка уже показана в createPayment()
@@ -2326,13 +2333,18 @@ async function loadUserBookings() {
 
     if (cached && !cached.isExpired) {
         // ✅ Кеш свежий - показываем мгновенно
-        console.log('📦 Загружены бронирования из кеша (свежие)');
+        console.log(`✅ [Cache] Данные актуальны: ${cacheKey} (возраст: ${Math.round(cached.age / 1000)}s)`);
         State.userBookings = cached.data;
         renderMyBookingsScreen(); // Сразу отрисовываем
 
-        // 🔄 В фоне обновляем данные от Make.com (stale-while-revalidate)
-        console.log('🔄 Обновление бронирований в фоне...');
-        loadUserBookingsFromAPI(cacheKey, CACHE_TTL, true); // background = true
+        // 🔄 Оптимизация: обновляем в фоне только если кеш не очень свежий
+        const FRESH_THRESHOLD = 10 * 1000; // 10 секунд
+        if (cached.age > FRESH_THRESHOLD) {
+            console.log('🔄 Обновление бронирований в фоне...');
+            loadUserBookingsFromAPI(cacheKey, CACHE_TTL, true); // background = true
+        } else {
+            console.log(`⚡ Кеш очень свежий (${Math.round(cached.age / 1000)}s) - пропуск фонового обновления`);
+        }
         return;
     }
 
