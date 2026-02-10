@@ -1441,6 +1441,11 @@ function renderLockingBookingCard(booking) {
                     </p>
                 `}
             </div>
+            <div class="service-footer">
+                <button class="service-btn" onclick="cancelBooking('${bookingId}')">
+                    Отменить запись
+                </button>
+            </div>
         </div>
     `;
 }
@@ -2439,35 +2444,86 @@ async function loadUserBookingsFromAPI(cacheKey, cacheTTL, isBackground = false)
     }
 }
 
+/**
+ * Отменяет бронирование слота
+ * @param {string} slotId - ID слота для отмены
+ */
 async function cancelBooking(slotId) {
-    if (!confirm('Вы уверены что хотите отменить запись?')) {
-        return;
+    console.log('🚫 [cancelBooking] Запрос на отмену слота:', slotId);
+
+    // Haptic feedback
+    if (tg.HapticFeedback) {
+        tg.HapticFeedback.impactOccurred('light');
     }
-    
-    showLoader();
-    
-    try {
-        const result = await BookingAPI.cancelBooking(slotId);
-        hideLoader();
-        
-        if (result.success) {
-            tg.showAlert('Запись отменена');
 
-            // 🗑️ CACHE: Инвалидируем кеш после отмены бронирования
-            console.log('🗑️ Инвалидация кеша после отмены бронирования...');
-            CacheManager.clear(`bookings_${USER.id}`); // Список бронирований изменился
-            CacheManager.clear('slots_json'); // [T-002] Инвалидация slots.json
-            CacheManager.clearPattern('dates_'); // Доступные даты могли измениться
-            CacheManager.clearPattern('slots_'); // Слоты изменились
-
-            await loadUserBookings();
-            renderMyBookingsScreen();
+    // Показываем модальное окно подтверждения
+    tg.showPopup({
+        title: 'Отмена записи',
+        message: 'Вы уверены, что хотите отменить запись?',
+        buttons: [
+            { id: 'cancel', type: 'cancel', text: 'Назад' },
+            { id: 'confirm', type: 'destructive', text: 'Отменить запись' }
+        ]
+    }, async (buttonId) => {
+        if (buttonId !== 'confirm') {
+            console.log('❌ [cancelBooking] Отмена отменена пользователем');
+            return;
         }
-    } catch (error) {
-        hideLoader();
-        console.error('❌ Ошибка отмены:', error);
-        tg.showAlert('Не удалось отменить запись');
-    }
+
+        console.log('✅ [cancelBooking] Подтверждение получено, начинаем отмену');
+
+        // Показываем loading modal
+        showLoadingModal('Отмена бронирования...');
+
+        try {
+            const result = await BookingAPI.cancelBooking(slotId);
+            hideLoadingModal();
+
+            if (result.success) {
+                console.log('✅ [cancelBooking] Запись успешно отменена');
+
+                // Haptic feedback успеха
+                if (tg.HapticFeedback) {
+                    tg.HapticFeedback.notificationOccurred('success');
+                }
+
+                // Показываем сообщение об успехе
+                tg.showPopup({
+                    title: 'Готово',
+                    message: 'Запись отменена',
+                    buttons: [{ type: 'ok' }]
+                });
+
+                // 🗑️ CACHE: Инвалидируем кеш после отмены бронирования
+                console.log('🗑️ Инвалидация кеша после отмены бронирования...');
+                CacheManager.clear(`bookings_${USER.id}`);
+                CacheManager.clear('slots_json');
+                CacheManager.clearPattern('dates_');
+                CacheManager.clearPattern('slots_');
+
+                // Обновляем список бронирований
+                await loadUserBookings();
+                renderMyBookingsScreen();
+            } else {
+                throw new Error(result.error || 'Не удалось отменить запись');
+            }
+        } catch (error) {
+            hideLoadingModal();
+            console.error('❌ [cancelBooking] Ошибка отмены:', error);
+
+            // Haptic feedback ошибки
+            if (tg.HapticFeedback) {
+                tg.HapticFeedback.notificationOccurred('error');
+            }
+
+            // Показываем сообщение об ошибке
+            tg.showPopup({
+                title: 'Ошибка',
+                message: 'Не удалось отменить запись. Попробуйте позже.',
+                buttons: [{ type: 'ok' }]
+            });
+        }
+    });
 }
 
 // ===== НАВИГАЦИЯ МЕЖДУ ТАБАМИ =====
