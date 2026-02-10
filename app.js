@@ -447,6 +447,7 @@ const State = {
     bookingsLoadTimeout: null,  // Для debounce загрузки записей
     selectDateDebounceTimer: null,  // 🔧 HOTFIX v20: Debounce для быстрых кликов по датам
     isAppActive: true,  // 🔧 ИСПРАВЛЕНИЕ 1: Флаг активности приложения
+    isBooking: false,  // Защита от двойного клика при бронировании
     isPopupOpen: false,  // 🔧 FIX: Флаг открытого popup (предотвращает "Popup is already opened")
     isSelectingSlot: false,  // [T-003] Флаг выбора слота (защита от двойного клика)
     isCreatingPayment: false  // [T-003] Флаг создания платежа (защита от двойного клика из карточки бронирования)
@@ -1758,12 +1759,20 @@ async function confirmBooking() {
         return;
     }
 
+    // Защита от двойного клика
+    if (State.isBooking) {
+        console.log('⚠️ [confirmBooking] Запрос уже выполняется, игнорируем повторный клик');
+        tg.HapticFeedback.notificationOccurred('warning');
+        return;
+    }
+
     // [T-003] Проверяем является ли услуга платной
     const price = CONFIG.SERVICE_PRICES[State.selectedService];
     const isPaidService = price && price > 0;
 
     // [T-003] Для платных услуг - создаём платёж через YooKassa
     if (isPaidService) {
+        State.isBooking = true;  // Блокируем повторные клики
         try {
             // Находим слот в availableSlots чтобы получить slot.id
             const slot = State.availableSlots.find(s => s.time === State.selectedSlot);
@@ -1796,12 +1805,16 @@ async function confirmBooking() {
 
         } catch (error) {
             console.error('❌ [confirmBooking] Ошибка создания платежа:', error);
+            tg.HapticFeedback.notificationOccurred('error');
             // Ошибка уже показана в createPayment()
+        } finally {
+            State.isBooking = false;  // Всегда разблокируем после завершения
         }
         return;
     }
 
     // [T-003] Для бесплатных услуг - прямое бронирование (старая логика)
+    State.isBooking = true;  // Блокируем повторные клики
     try {
         console.log(`✅ [confirmBooking] Бесплатная услуга - прямое бронирование`);
 
@@ -1816,6 +1829,7 @@ async function confirmBooking() {
 
         if (result.success) {
             tg.showAlert('Запись успешно создана!');
+            tg.HapticFeedback.notificationOccurred('success');
 
             // 🗑️ CACHE: Инвалидируем кеш после создания бронирования
             console.log('🗑️ Инвалидация кеша после создания бронирования...');
@@ -1838,6 +1852,9 @@ async function confirmBooking() {
         hideLoader();
         console.error('Ошибка бронирования:', error);
         tg.showAlert('Не удалось создать запись. Попробуйте позже.');
+        tg.HapticFeedback.notificationOccurred('error');
+    } finally {
+        State.isBooking = false;  // Всегда разблокируем после завершения
     }
 }
 
