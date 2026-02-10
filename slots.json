@@ -1,6 +1,160 @@
 {
-  "generated_at": "2026-02-09T10:21:53.000Z",
+  "generated_at": "2026-02-10T14:21:28.000Z",
   "slots": [
+	{
+		"id": "pslot_47",
+		"date": "10.02.2026",
+		"time": "10:00",
+		"status": "free",
+		"service": "package"
+	},
+	{
+		"id": "pslot_48",
+		"date": "10.02.2026",
+		"time": "12:00",
+		"status": "free",
+		"service": "package"
+	},
+	{
+		"id": "pslot_49",
+		"date": "10.02.2026",
+		"time": "14:00",
+		"status": "free",
+		"service": "package"
+	},
+	{
+		"id": "pslot_50",
+		"date": "10.02.2026",
+		"time": "16:00",
+		"status": "free",
+		"service": "package"
+	},
+	{
+		"id": "pslot_51",
+		"date": "10.02.2026",
+		"time": "18:00",
+		"status": "free",
+		"service": "package"
+	},
+	{
+		"id": "fslot_52",
+		"date": "10.02.2026",
+		"time": "10:00",
+		"status": "free",
+		"service": "family"
+	},
+	{
+		"id": "fslot_53",
+		"date": "10.02.2026",
+		"time": "12:00",
+		"status": "free",
+		"service": "family"
+	},
+	{
+		"id": "fslot_54",
+		"date": "10.02.2026",
+		"time": "14:00",
+		"status": "free",
+		"service": "family"
+	},
+	{
+		"id": "fslot_55",
+		"date": "10.02.2026",
+		"time": "16:00",
+		"status": "free",
+		"service": "family"
+	},
+	{
+		"id": "fslot_56",
+		"date": "10.02.2026",
+		"time": "18:00",
+		"status": "free",
+		"service": "family"
+	},
+	{
+		"id": "sslot_57",
+		"date": "10.02.2026",
+		"time": "10:00",
+		"status": "free",
+		"service": "single"
+	},
+	{
+		"id": "sslot_58",
+		"date": "10.02.2026",
+		"time": "12:00",
+		"status": "free",
+		"service": "single"
+	},
+	{
+		"id": "sslot_59",
+		"date": "10.02.2026",
+		"time": "14:00",
+		"status": "free",
+		"service": "single"
+	},
+	{
+		"id": "sslot_60",
+		"date": "10.02.2026",
+		"time": "16:00",
+		"status": "free",
+		"service": "single"
+	},
+	{
+		"id": "sslot_61",
+		"date": "10.02.2026",
+		"time": "18:00",
+		"status": "free",
+		"service": "single"
+	},
+	{
+		"id": "dslot_62",
+		"date": "11.02.2026",
+		"time": "10:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "dslot_63",
+		"date": "11.02.2026",
+		"time": "11:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "dslot_64",
+		"date": "11.02.2026",
+		"time": "12:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "dslot_65",
+		"date": "11.02.2026",
+		"time": "13:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "dslot_66",
+		"date": "11.02.2026",
+		"time": "14:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "dslot_67",
+		"date": "11.02.2026",
+		"time": "15:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
+	{
+		"id": "dslot_68",
+		"date": "11.02.2026",
+		"time": "16:00",
+		"status": "free",
+		"service": "diagnosis"
+	},
 	{
 		"id": "dslot_69",
 		"date": "11.02.2026",
@@ -77,13 +231,6 @@
 		"time": "18:00",
 		"status": "free",
 		"service": "family"
-	},
-	{
-		"id": "sslot_80",
-		"date": "12.02.2026",
-		"time": "10:00",
-		"status": "free",
-		"service": "single"
 	},
 	{
 		"id": "sslot_81",
