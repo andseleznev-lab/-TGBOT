@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-02-10T16:26:26.000Z",
+  "generated_at": "2026-02-10T19:31:40.000Z",
   "slots": [
 	{
 		"id": "pslot_47",
@@ -107,13 +107,6 @@
 		"service": "single"
 	},
 	{
-		"id": "dslot_62",
-		"date": "11.02.2026",
-		"time": "10:00",
-		"status": "free",
-		"service": "diagnosis"
-	},
-	{
 		"id": "dslot_63",
 		"date": "11.02.2026",
 		"time": "11:00",
@@ -161,13 +154,6 @@
 		"time": "17:00",
 		"status": "free",
 		"service": "diagnosis"
-	},
-	{
-		"id": "pslot_70",
-		"date": "12.02.2026",
-		"time": "10:00",
-		"status": "free",
-		"service": "package"
 	},
 	{
 		"id": "pslot_71",
@@ -231,6 +217,13 @@
 		"time": "18:00",
 		"status": "free",
 		"service": "family"
+	},
+	{
+		"id": "sslot_80",
+		"date": "12.02.2026",
+		"time": "10:00",
+		"status": "free",
+		"service": "single"
 	},
 	{
 		"id": "sslot_81",
