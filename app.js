@@ -1407,9 +1407,9 @@ function renderLockingBookingCard(booking) {
     const serviceId = escapeHtml(booking.service_id || booking.service);
 
     return `
-        <div class="service-card glass-card" style="border: 2px solid rgba(255, 165, 0, 0.5); background: rgba(255, 165, 0, 0.05);">
+        <div class="service-card glass-card">
             <div class="service-header">
-                <div class="service-icon">⏳</div>
+                <div class="service-icon">📅</div>
                 <div class="service-info">
                     <div class="service-name">${serviceName}</div>
                     <div class="service-duration">${bookingDate} в ${bookingTime}</div>
