@@ -2233,7 +2233,9 @@ async function loadUserBookingsFromAPI(cacheKey, cacheTTL, isBackground = false)
                 date: booking["1"] || booking.date,
                 time: booking["2"] || booking.start_time,
                 service: booking["5"] || booking.service,
-                zoom_link: booking["12"] || booking.zoom_link
+                status: booking["7"] || booking.status,
+                zoom_link: booking["12"] || booking.zoom_link,
+                locked_until: booking["22"] || booking.locked_until
             })).filter(b => b.id && b.date && b.time);  // Фильтруем пустые
         }
 
