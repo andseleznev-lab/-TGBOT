@@ -850,7 +850,7 @@ body {
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(74, 66, 56, 0.5);
+    background: rgba(245, 230, 211, 0.5);
     backdrop-filter: blur(8px);
     display: flex;
     align-items: center;
