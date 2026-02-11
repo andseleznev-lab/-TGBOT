@@ -1,111 +1,6 @@
 {
-  "generated_at": "2026-02-10T19:40:57.000Z",
+  "generated_at": "2026-02-11T10:50:55.000Z",
   "slots": [
-	{
-		"id": "pslot_47",
-		"date": "10.02.2026",
-		"time": "10:00",
-		"status": "free",
-		"service": "package"
-	},
-	{
-		"id": "pslot_48",
-		"date": "10.02.2026",
-		"time": "12:00",
-		"status": "free",
-		"service": "package"
-	},
-	{
-		"id": "pslot_49",
-		"date": "10.02.2026",
-		"time": "14:00",
-		"status": "free",
-		"service": "package"
-	},
-	{
-		"id": "pslot_50",
-		"date": "10.02.2026",
-		"time": "16:00",
-		"status": "free",
-		"service": "package"
-	},
-	{
-		"id": "pslot_51",
-		"date": "10.02.2026",
-		"time": "18:00",
-		"status": "free",
-		"service": "package"
-	},
-	{
-		"id": "fslot_52",
-		"date": "10.02.2026",
-		"time": "10:00",
-		"status": "free",
-		"service": "family"
-	},
-	{
-		"id": "fslot_53",
-		"date": "10.02.2026",
-		"time": "12:00",
-		"status": "free",
-		"service": "family"
-	},
-	{
-		"id": "fslot_54",
-		"date": "10.02.2026",
-		"time": "14:00",
-		"status": "free",
-		"service": "family"
-	},
-	{
-		"id": "fslot_55",
-		"date": "10.02.2026",
-		"time": "16:00",
-		"status": "free",
-		"service": "family"
-	},
-	{
-		"id": "fslot_56",
-		"date": "10.02.2026",
-		"time": "18:00",
-		"status": "free",
-		"service": "family"
-	},
-	{
-		"id": "sslot_57",
-		"date": "10.02.2026",
-		"time": "10:00",
-		"status": "free",
-		"service": "single"
-	},
-	{
-		"id": "sslot_58",
-		"date": "10.02.2026",
-		"time": "12:00",
-		"status": "free",
-		"service": "single"
-	},
-	{
-		"id": "sslot_59",
-		"date": "10.02.2026",
-		"time": "14:00",
-		"status": "free",
-		"service": "single"
-	},
-	{
-		"id": "sslot_60",
-		"date": "10.02.2026",
-		"time": "16:00",
-		"status": "free",
-		"service": "single"
-	},
-	{
-		"id": "sslot_61",
-		"date": "10.02.2026",
-		"time": "18:00",
-		"status": "free",
-		"service": "single"
-	},
 	{
 		"id": "dslot_62",
 		"date": "11.02.2026",
@@ -469,6 +364,13 @@
 		"time": "17:00",
 		"status": "free",
 		"service": "diagnosis"
+	},
+	{
+		"id": "pslot_116",
+		"date": "19.02.2026",
+		"time": "10:00",
+		"status": "free",
+		"service": "package"
 	},
 	{
 		"id": "pslot_117",
