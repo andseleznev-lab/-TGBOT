@@ -1323,43 +1323,6 @@ function renderServicesScreen() {
     document.getElementById('app').innerHTML = html;
 }
 
-// Экран оплаты
-function renderPaymentScreen() {
-    const html = `
-        <h1 class="screen-title fade-in">Способы оплаты</h1>
-        <div class="payment-grid fade-in">
-            <div class="payment-card glass-card" onclick="openPayment('card')">
-                <div class="payment-icon">💳</div>
-                <div class="payment-info">
-                    <div class="payment-name">Банковская карта</div>
-                    <div class="payment-description">Visa, MasterCard, МИР</div>
-                </div>
-                <div class="payment-arrow">→</div>
-            </div>
-            
-            <div class="payment-card glass-card" onclick="openPayment('sbp')">
-                <div class="payment-icon">🔗</div>
-                <div class="payment-info">
-                    <div class="payment-name">Система быстрых платежей</div>
-                    <div class="payment-description">Оплата через СБП</div>
-                </div>
-                <div class="payment-arrow">→</div>
-            </div>
-            
-            <div class="payment-card glass-card" onclick="openPayment('other')">
-                <div class="payment-icon">💰</div>
-                <div class="payment-info">
-                    <div class="payment-name">Другие способы</div>
-                    <div class="payment-description">Альтернативные методы</div>
-                </div>
-                <div class="payment-arrow">→</div>
-            </div>
-        </div>
-    `;
-    
-    document.getElementById('app').innerHTML = html;
-}
-
 // Экран бронирования
 function renderBookingScreen() {
     console.log(`🎨 renderBookingScreen: service=${State.selectedService}, date=${State.selectedDate}, slots=${State.availableSlots?.length || 0}, dates=${State.availableDates?.length || 0}`);
@@ -1916,15 +1879,6 @@ async function confirmBooking() {
         tg.HapticFeedback.notificationOccurred('error');
     } finally {
         State.isBooking = false;  // Всегда разблокируем после завершения
-    }
-}
-
-function openPayment(method) {
-    const url = CONFIG.PAYMENT_URLS[method];
-    if (url && !url.includes('your-payment-link')) {
-        tg.openLink(url);
-    } else {
-        tg.showAlert('Ссылка на оплату будет добавлена позже');
     }
 }
 
@@ -2607,9 +2561,6 @@ function switchTab(tabName) {
     switch(tabName) {
         case 'services':
             renderServicesScreen();
-            break;
-        case 'payment':
-            renderPaymentScreen();
             break;
         case 'booking':
             renderBookingScreen();
