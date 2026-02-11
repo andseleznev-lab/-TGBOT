@@ -479,8 +479,8 @@ body {
         box-shadow: 0 4px 12px rgba(212, 165, 116, 0.4);
     }
     50% {
-        transform: scale(1.2);
-        box-shadow: 0 6px 16px rgba(212, 165, 116, 0.6);
+        transform: scale(1.25);
+        box-shadow: 0 8px 20px rgba(212, 165, 116, 0.7);
     }
 }
 
