@@ -7,7 +7,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <title>Запись на консультацию</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <link rel="stylesheet" href="styles.css?v=19">
+    <link rel="stylesheet" href="styles.css?v=20">
     
     <style>
         /* Стили для кнопки скачивания логов */
@@ -361,12 +361,12 @@ Telegram User ID: ${window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 'unknow
     </script>
 
     <!-- Основные скрипты приложения -->
-    <script src="config.js?v=26"></script>
-    <script src="app.js?v=35">
+    <script src="config.js?v=27"></script>
+    <script src="app.js?v=36">
 
     <!-- 📝 Логирование для проверки загрузки -->
     <script>
-        console.log('✅ index.html loaded - version 35.0 - Custom success popup in app style + fixed getErrorType for null error');
+        console.log('✅ index.html loaded - version 36.0 - UI improvements: new service screen title, removed emoji icons, updated service descriptions, round calendar dates with salad color and scale animation');
         console.log('📦 Files loaded:', {
             telegram: !!window.Telegram,
             config: !!window.CONFIG,
