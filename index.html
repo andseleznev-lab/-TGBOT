@@ -9,6 +9,8 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link rel="stylesheet" href="styles.css?v=24">
     
+    <!-- 🔧 СТИЛИ ДЛЯ КНОПОК ОТЛАДКИ (временно отключены) -->
+    <!--
     <style>
         /* Стили для кнопки скачивания логов */
         #debug-controls {
@@ -19,7 +21,7 @@
             display: flex;
             gap: 8px;
         }
-        
+
         .debug-btn {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -32,27 +34,30 @@
             box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
             transition: all 0.2s;
         }
-        
+
         .debug-btn:active {
             transform: scale(0.95);
         }
-        
+
         .debug-btn.success {
             background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
         }
-        
+
         .debug-btn.error {
             background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
         }
     </style>
+    -->
 </head>
 <body>
-    <!-- 🔧 КНОПКИ ОТЛАДКИ (удалите после тестов) -->
+    <!-- 🔧 КНОПКИ ОТЛАДКИ (временно отключены) -->
+    <!--
     <div id="debug-controls">
         <button class="debug-btn" onclick="downloadLogs()">📥 Скачать логи</button>
         <button class="debug-btn" onclick="copyLogs()">📋 Копировать</button>
         <button class="debug-btn" onclick="clearLogs()">🗑️ Очистить</button>
     </div>
+    -->
 
     <!-- Основной контейнер приложения -->
     <div id="app">
@@ -368,7 +373,7 @@ Telegram User ID: ${window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 'unknow
 
     <!-- 📝 Логирование для проверки загрузки -->
     <script>
-        console.log('✅ index.html loaded - version 36.5 - UI improvements: new service screen title, removed emoji icons, updated service descriptions, round calendar dates with salad color, ripple wave effect');
+        console.log('✅ index.html loaded - version 36.6 - UI improvements: new service screen title, removed emoji icons, updated service descriptions, round calendar dates with salad color, ripple wave effect, debug controls hidden');
         console.log('📦 Files loaded:', {
             telegram: !!window.Telegram,
             config: !!window.CONFIG
