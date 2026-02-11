@@ -1293,12 +1293,12 @@ function renderServicesScreen() {
     const services = State.services;
     
     const html = `
-        <h1 class="screen-title fade-in">Выберите услугу</h1>
+        <h1 class="screen-title fade-in">Диагностика - это первый шаг перед консультацией</h1>
         <div class="services-grid fade-in">
             ${services.map(service => `
                 <div class="service-card glass-card" onclick="selectService('${escapeHtml(service.id)}')">
                     <div class="service-header">
-                        <div class="service-icon">${CONFIG.SERVICE_ICONS[service.name] || '📋'}</div>
+                        ${CONFIG.SERVICE_ICONS[service.name] ? `<div class="service-icon">${CONFIG.SERVICE_ICONS[service.name]}</div>` : ''}
                         <div class="service-info">
                             <div class="service-name">${escapeHtml(service.name)}</div>
                             <div class="service-duration">${service.duration}</div>
@@ -2671,9 +2671,9 @@ function getServiceDescription(serviceName) {
     const descriptions = {
         'Диагностика': 'Первичная консультация для знакомства и определения запроса',
         'Вступить в клуб': 'Эксклюзивный доступ к закрытому сообществу и материалам',
-        'Пакет консультаций': '10 индивидуальных сессий со скидкой 25%',
+        'Пакет консультаций': 'Лучшее решение для работы с психологом',
         'Семейная консультация': 'Работа с парой или семьёй, длительность 2 часа',
-        'Индивидуальная консультация': 'Персональная встреча один на один, 1 час'
+        'Индивидуальная консультация': 'Персональная консультация с психологом, 1 час'
     };
     return descriptions[serviceName] || '';
 }

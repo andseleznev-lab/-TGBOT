@@ -422,11 +422,12 @@ body {
 }
 
 .calendar-day.available {
-    background: linear-gradient(135deg, #A8C686, #C5E1A5) !important;
-    border: 3px solid #7FA860 !important;
+    background: linear-gradient(135deg, #C5E1A5, #A8D08D) !important;
+    border: 2px solid #8BC34A !important;
+    border-radius: 50% !important;
     color: var(--text-primary) !important;
     font-weight: 700 !important;
-    box-shadow: 0 4px 12px rgba(168, 198, 134, 0.5) !important;
+    box-shadow: 0 4px 12px rgba(139, 195, 74, 0.5) !important;
     animation: pulse-available 2s ease-in-out infinite !important;
 }
 
@@ -451,7 +452,24 @@ body {
     background: var(--accent-gradient);
     color: var(--text-white);
     border-color: var(--accent-primary);
+    border-radius: 50% !important;
     box-shadow: 0 4px 12px rgba(212, 165, 116, 0.4);
+    transform: scale(1.15);
+    animation: scale-in 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+@keyframes scale-in {
+    0% {
+        transform: scale(0.8);
+        opacity: 0.5;
+    }
+    50% {
+        transform: scale(1.25);
+    }
+    100% {
+        transform: scale(1.15);
+        opacity: 1;
+    }
 }
 
 .calendar-day.disabled {
@@ -465,23 +483,7 @@ body {
 }
 
 .slots-indicator {
-    position: absolute;
-    bottom: 4px;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--accent-primary);
-}
-
-.calendar-day.available .slots-indicator {
-    background: #FF5722 !important;
-    width: 8px;
-    height: 8px;
-    box-shadow: 0 0 8px rgba(255, 87, 34, 0.8);
-}
-
-.calendar-day.selected .slots-indicator {
-    background: var(--text-white);
+    display: none;
 }
 
 /* ===== СЛОТЫ ВРЕМЕНИ ===== */
