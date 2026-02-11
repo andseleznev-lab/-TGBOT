@@ -796,6 +796,22 @@ class BookingAPI {
  * @returns {{type: string, message: string}} Тип и сообщение ошибки
  */
 function getErrorType(error, response = null) {
+    // Сначала проверяем HTTP статус коды (если error = null, но есть response)
+    // Ошибка сервера (5xx)
+    if (response && response.status >= 500) {
+        return { type: 'SERVER', message: 'Сервер временно недоступен. Попробуйте позже' };
+    }
+
+    // Ошибка клиента (4xx)
+    if (response && response.status >= 400) {
+        return { type: 'CLIENT', message: 'Некорректный запрос' };
+    }
+
+    // Если error = null, но нет response - неизвестная ошибка
+    if (!error) {
+        return { type: 'UNKNOWN', message: 'Произошла ошибка. Попробуйте позже' };
+    }
+
     // Запрос отменён (переключение табов, выход из приложения)
     if (error.name === 'AbortError') {
         return { type: 'ABORT', message: 'Request cancelled' };
@@ -811,16 +827,6 @@ function getErrorType(error, response = null) {
         error.message === 'Failed to fetch' ||
         error.message === 'Network request failed') {
         return { type: 'NETWORK', message: 'Проверьте интернет-соединение' };
-    }
-
-    // Ошибка сервера (5xx)
-    if (response && response.status >= 500) {
-        return { type: 'SERVER', message: 'Сервер временно недоступен. Попробуйте позже' };
-    }
-
-    // Ошибка клиента (4xx)
-    if (response && response.status >= 400) {
-        return { type: 'CLIENT', message: 'Некорректный запрос' };
     }
 
     // Неизвестная ошибка
@@ -1234,6 +1240,49 @@ function hideLoadingModal() {
     if (modal) {
         modal.remove();
         console.log('✅ [hideLoadingModal] Окно загрузки скрыто');
+    }
+}
+
+/**
+ * Показывает кастомный попап успеха
+ * @param {string} title Заголовок попапа
+ * @param {string} message Текст сообщения
+ */
+function showSuccessPopup(title = 'Готово', message = 'Операция выполнена') {
+    const overlay = document.getElementById('success-popup-overlay');
+    const titleEl = document.getElementById('success-popup-title');
+    const messageEl = document.getElementById('success-popup-message');
+
+    if (overlay && titleEl && messageEl) {
+        titleEl.textContent = title;
+        messageEl.textContent = message;
+        overlay.classList.remove('hidden', 'closing');
+
+        console.log(`✅ [showSuccessPopup] Показан попап: ${title} - ${message}`);
+    }
+}
+
+/**
+ * Скрывает кастомный попап успеха
+ */
+function hideSuccessPopup() {
+    const overlay = document.getElementById('success-popup-overlay');
+
+    if (overlay) {
+        overlay.classList.add('closing');
+
+        // Haptic feedback при закрытии
+        if (tg.HapticFeedback) {
+            tg.HapticFeedback.impactOccurred('light');
+        }
+
+        // Удаляем класс hidden после анимации
+        setTimeout(() => {
+            overlay.classList.add('hidden');
+            overlay.classList.remove('closing');
+        }, 300); // Совпадает с transition-normal (0.3s)
+
+        console.log('✅ [hideSuccessPopup] Попап скрыт');
     }
 }
 
@@ -2487,12 +2536,8 @@ async function cancelBooking(slotId) {
                     tg.HapticFeedback.notificationOccurred('success');
                 }
 
-                // Показываем сообщение об успехе
-                tg.showPopup({
-                    title: 'Готово',
-                    message: 'Запись отменена',
-                    buttons: [{ type: 'ok' }]
-                });
+                // Показываем кастомный попап успеха
+                showSuccessPopup('Готово', 'Запись отменена');
 
                 // 🗑️ CACHE: Инвалидируем кеш после отмены бронирования
                 console.log('🗑️ Инвалидация кеша после отмены бронирования...');

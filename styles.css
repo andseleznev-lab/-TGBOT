@@ -1048,3 +1048,94 @@ body {
     color: var(--text-secondary);
     text-align: center;
 }
+
+/* ===== SUCCESS POPUP (Custom) ===== */
+.success-popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(245, 230, 211, 0.5);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    padding: 20px;
+    opacity: 0;
+    animation: fadeIn var(--transition-normal) forwards;
+}
+
+.success-popup-overlay.hidden {
+    display: none;
+}
+
+.success-popup-overlay.closing {
+    animation: fadeOut var(--transition-normal) forwards;
+}
+
+.success-popup {
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--glass-shadow-hover);
+    max-width: 320px;
+    width: 100%;
+    transform: scale(0.9) translateY(20px);
+    animation: modalSlideIn var(--transition-normal) forwards;
+}
+
+.success-popup-overlay.closing .success-popup {
+    animation: modalSlideOut var(--transition-normal) forwards;
+}
+
+.success-popup-header {
+    padding: var(--spacing-lg);
+    text-align: center;
+}
+
+.success-popup-header h2 {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.success-popup-body {
+    padding: 0 var(--spacing-lg) var(--spacing-lg);
+    text-align: center;
+}
+
+.success-popup-body p {
+    font-size: 16px;
+    color: var(--text-secondary);
+    margin: 0;
+    line-height: 1.5;
+}
+
+.success-popup-footer {
+    padding: 0 var(--spacing-lg) var(--spacing-lg);
+}
+
+.success-popup-button {
+    width: 100%;
+    padding: 16px;
+    background: var(--accent-gradient);
+    border: none;
+    border-radius: var(--border-radius);
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--text-white);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    box-shadow: 0 4px 12px rgba(212, 165, 116, 0.3);
+}
+
+.success-popup-button:active {
+    transform: scale(0.98);
+    box-shadow: 0 2px 8px rgba(212, 165, 116, 0.2);
+}
