@@ -353,12 +353,14 @@ Telegram User ID: ${window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 'unknow
         console.log('📋 Для копирования нажмите кнопку "📋 Копировать"');
     </script>
 
-    <!-- 🔧 ERUDA DevTools для мобильной отладки -->
+    <!-- 🔧 ERUDA DevTools для мобильной отладки (временно отключен) -->
+    <!--
     <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
     <script>
         eruda.init();
         console.log('🔧 Eruda DevTools initialized');
     </script>
+    -->
 
     <!-- Основные скрипты приложения -->
     <script src="config.js?v=27"></script>
@@ -366,11 +368,10 @@ Telegram User ID: ${window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 'unknow
 
     <!-- 📝 Логирование для проверки загрузки -->
     <script>
-        console.log('✅ index.html loaded - version 36.4 - UI improvements: new service screen title, removed emoji icons, updated service descriptions, round calendar dates with salad color, ripple wave effect');
+        console.log('✅ index.html loaded - version 36.5 - UI improvements: new service screen title, removed emoji icons, updated service descriptions, round calendar dates with salad color, ripple wave effect');
         console.log('📦 Files loaded:', {
             telegram: !!window.Telegram,
-            config: !!window.CONFIG,
-            eruda: !!window.eruda
+            config: !!window.CONFIG
         });
     </script>
 </body>
