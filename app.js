@@ -2343,6 +2343,7 @@ async function loadUserBookings() {
         // ✅ Кеш свежий - показываем мгновенно
         console.log(`✅ [Cache] Данные актуальны: ${cacheKey} (возраст: ${Math.round(cached.age / 1000)}s)`);
         State.userBookings = cached.data;
+        updateBookingsBadge();
         renderMyBookingsScreen(); // Сразу отрисовываем
 
         // 🔄 Оптимизация: обновляем в фоне только если кеш не очень свежий
@@ -2361,6 +2362,7 @@ async function loadUserBookings() {
         console.log('📦 Загружены бронирования из кеша (устаревшие) - обновление...');
         State.userBookings = cached.data;
         State.isLoadingBookings = false;  // 🔧 HOTFIX v22: Есть данные из кеша - не показываем loading
+        updateBookingsBadge();
         renderMyBookingsScreen(); // Показываем старые данные
     } else if (!cached) {
         // 🔧 HOTFIX v22: Кеша нет - показываем loading
@@ -2408,6 +2410,9 @@ async function loadUserBookingsFromAPI(cacheKey, cacheTTL, isBackground = false)
 
         console.log('✅ Обработанные бронирования:', State.userBookings);
 
+        // Обновляем badge
+        updateBookingsBadge();
+
         // Обновляем UI если это не фоновая загрузка
         if (!isBackground) {
             hideLoader();
@@ -2429,6 +2434,7 @@ async function loadUserBookingsFromAPI(cacheKey, cacheTTL, isBackground = false)
         if (cached) {
             console.log('📦 Показываем старые данные из кеша при ошибке');
             State.userBookings = cached.data;
+            updateBookingsBadge();
             if (!isBackground) {
                 hideLoader();
             }
@@ -2436,6 +2442,7 @@ async function loadUserBookingsFromAPI(cacheKey, cacheTTL, isBackground = false)
         } else {
             // Кеша нет - показываем пустой массив
             State.userBookings = [];
+            updateBookingsBadge();
             if (!isBackground) {
                 hideLoader();
             }
@@ -2445,6 +2452,26 @@ async function loadUserBookingsFromAPI(cacheKey, cacheTTL, isBackground = false)
         // НЕ показываем дублирующий alert - popup уже показан в handleNetworkError
         // НЕ пробрасываем ошибку - иначе получим unhandled rejection
     }
+}
+
+/**
+ * Обновляет badge с количеством записей на вкладке "Мои записи"
+ * Показывает количество всех записей (locking + book)
+ */
+function updateBookingsBadge() {
+    const badge = document.getElementById('bookings-badge');
+    if (!badge) return;
+
+    const count = State.userBookings.length;
+
+    if (count > 0) {
+        badge.textContent = count;
+        badge.style.display = 'flex';
+    } else {
+        badge.style.display = 'none';
+    }
+
+    console.log(`📍 Badge обновлён: ${count} записей`);
 }
 
 /**
