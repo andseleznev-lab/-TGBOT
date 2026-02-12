@@ -740,7 +740,10 @@ class BookingAPI {
 
             // Проверяем success флаг от Make.com
             if (!result.success) {
-                throw new Error(result.error || 'Неизвестная ошибка от сервера');
+                const error = new Error(result.error || 'Неизвестная ошибка от сервера');
+                // Сохраняем дополнительные поля из ответа (для кастомных попапов)
+                error.apiResponse = result;
+                throw error;
             }
 
             const duration = Date.now() - startTime;
@@ -1283,6 +1286,58 @@ function hideSuccessPopup() {
         }, 300); // Совпадает с transition-normal (0.3s)
 
         console.log('✅ [hideSuccessPopup] Попап скрыт');
+    }
+}
+
+/**
+ * Показывает кастомный попап ошибки (слот занят)
+ * @param {string} message Текст сообщения из JSON (поле message)
+ */
+function showSlotTakenPopup(message = 'Слот уже забронирован другим пользователем') {
+    const overlay = document.getElementById('error-popup-overlay');
+    const titleEl = document.getElementById('error-popup-title');
+    const messageEl = document.getElementById('error-popup-message');
+
+    if (overlay && titleEl && messageEl) {
+        titleEl.textContent = 'Упс!';
+        messageEl.textContent = message;
+        overlay.classList.remove('hidden', 'closing');
+
+        // Haptic feedback ошибки
+        if (tg.HapticFeedback) {
+            tg.HapticFeedback.notificationOccurred('error');
+        }
+
+        console.log(`⚠️ [showSlotTakenPopup] Показан попап: ${message}`);
+
+        // Автозакрытие через 4 секунды
+        setTimeout(() => {
+            hideSlotTakenPopup();
+        }, 4000);
+    }
+}
+
+/**
+ * Скрывает кастомный попап ошибки
+ */
+function hideSlotTakenPopup() {
+    const overlay = document.getElementById('error-popup-overlay');
+
+    if (overlay) {
+        overlay.classList.add('closing');
+
+        // Haptic feedback при закрытии
+        if (tg.HapticFeedback) {
+            tg.HapticFeedback.impactOccurred('light');
+        }
+
+        // Удаляем класс hidden после анимации
+        setTimeout(() => {
+            overlay.classList.add('hidden');
+            overlay.classList.remove('closing');
+        }, 300); // Совпадает с transition-normal (0.3s)
+
+        console.log('✅ [hideSlotTakenPopup] Попап скрыт');
     }
 }
 
@@ -1875,8 +1930,17 @@ async function confirmBooking() {
     } catch (error) {
         hideLoader();
         console.error('Ошибка бронирования:', error);
-        tg.showAlert('Не удалось создать запись. Попробуйте позже.');
-        tg.HapticFeedback.notificationOccurred('error');
+
+        // Проверяем, это ошибка "слот занят" от Make.com
+        if (error.apiResponse?.slot_status === 'book') {
+            // Показываем кастомный попап с сообщением из JSON
+            const message = error.apiResponse.message || error.message;
+            showSlotTakenPopup(message);
+        } else {
+            // Обычная ошибка - стандартный alert
+            tg.showAlert('Не удалось создать запись. Попробуйте позже.');
+            tg.HapticFeedback.notificationOccurred('error');
+        }
     } finally {
         State.isBooking = false;  // Всегда разблокируем после завершения
     }
@@ -2641,15 +2705,26 @@ async function initApp() {
             // 🔧 ИСПРАВЛЕНИЕ 18: Предотвращаем множественные клики
             if (btn.disabled) return;
             btn.disabled = true;
-            
+
             switchTab(btn.dataset.tab);
-            
+
             // Разблокируем кнопку через 300ms
             setTimeout(() => {
                 btn.disabled = false;
             }, 300);
         });
     });
+
+    // Обработчик клика вне error-popup для закрытия
+    const errorPopupOverlay = document.getElementById('error-popup-overlay');
+    if (errorPopupOverlay) {
+        errorPopupOverlay.addEventListener('click', (e) => {
+            // Закрываем только при клике на overlay (не на сам попап)
+            if (e.target === errorPopupOverlay) {
+                hideSlotTakenPopup();
+            }
+        });
+    }
     
     await loadServices();
     renderServicesScreen();

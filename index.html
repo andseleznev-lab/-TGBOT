@@ -78,6 +78,21 @@
         </div>
     </div>
 
+    <!-- Кастомный попап ошибки (слот занят) -->
+    <div id="error-popup-overlay" class="error-popup-overlay hidden">
+        <div class="error-popup">
+            <div class="error-popup-header">
+                <h2 id="error-popup-title">Упс!</h2>
+            </div>
+            <div class="error-popup-body">
+                <p id="error-popup-message">Слот уже забронирован</p>
+            </div>
+            <div class="error-popup-footer">
+                <button class="error-popup-button" onclick="hideSlotTakenPopup()">Понятно</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Навигация (Tab Bar) -->
     <nav class="tab-bar">
         <button class="tab-btn active" data-tab="services">
