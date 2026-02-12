@@ -9,8 +9,7 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link rel="stylesheet" href="styles.css?v=24">
     
-    <!-- 🔧 СТИЛИ ДЛЯ КНОПОК ОТЛАДКИ (временно отключены) -->
-    <!--
+    <!-- 🔧 СТИЛИ ДЛЯ КНОПОК ОТЛАДКИ -->
     <style>
         /* Стили для кнопки скачивания логов */
         #debug-controls {
@@ -47,17 +46,14 @@
             background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
         }
     </style>
-    -->
 </head>
 <body>
-    <!-- 🔧 КНОПКИ ОТЛАДКИ (временно отключены) -->
-    <!--
+    <!-- 🔧 КНОПКИ ОТЛАДКИ -->
     <div id="debug-controls">
         <button class="debug-btn" onclick="downloadLogs()">📥 Скачать логи</button>
         <button class="debug-btn" onclick="copyLogs()">📋 Копировать</button>
         <button class="debug-btn" onclick="clearLogs()">🗑️ Очистить</button>
     </div>
-    -->
 
     <!-- Основной контейнер приложения -->
     <div id="app">
@@ -351,14 +347,12 @@ Telegram User ID: ${window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 'unknow
         console.log('📋 Для копирования нажмите кнопку "📋 Копировать"');
     </script>
 
-    <!-- 🔧 ERUDA DevTools для мобильной отладки (временно отключен) -->
-    <!--
+    <!-- 🔧 ERUDA DevTools для мобильной отладки -->
     <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
     <script>
         eruda.init();
         console.log('🔧 Eruda DevTools initialized');
     </script>
-    -->
 
     <!-- Основные скрипты приложения -->
     <script src="config.js?v=27"></script>
@@ -366,7 +360,7 @@ Telegram User ID: ${window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 'unknow
 
     <!-- 📝 Логирование для проверки загрузки -->
     <script>
-        console.log('✅ index.html loaded - version 36.11 - Removed scale-in animation for selected date');
+        console.log('✅ index.html loaded - version 36.12 - Enabled Eruda DevTools and debug buttons');
         console.log('📦 Files loaded:', {
             telegram: !!window.Telegram,
             config: !!window.CONFIG
