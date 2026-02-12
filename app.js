@@ -450,7 +450,10 @@ const State = {
     isBooking: false,  // Защита от двойного клика при бронировании
     isPopupOpen: false,  // 🔧 FIX: Флаг открытого popup (предотвращает "Popup is already opened")
     isSelectingSlot: false,  // [T-003] Флаг выбора слота (защита от двойного клика)
-    isCreatingPayment: false  // [T-003] Флаг создания платежа (защита от двойного клика из карточки бронирования)
+    isCreatingPayment: false,  // [T-003] Флаг создания платежа (защита от двойного клика из карточки бронирования)
+    clubPayments: [],  // [T-005] Массив платежей клуба для текущего пользователя
+    isLoadingClub: false,  // [T-005] Флаг загрузки данных клуба
+    clubZoomLink: ''  // [T-005] Ссылка на Zoom-встречу клуба
 };
 
 // 🔧 ИСПРАВЛЕНИЕ 2: Обработка visibility change для корректной работы при выходе/входе
@@ -1345,8 +1348,9 @@ function hideSlotTakenPopup() {
 
 // Экран услуг
 function renderServicesScreen() {
-    const services = State.services;
-    
+    // [T-005] Фильтруем club_info - он отображается только во вкладке "Клуб"
+    const services = State.services.filter(s => s.id !== 'club_info');
+
     const html = `
         <h1 class="screen-title fade-in">Диагностика - это первый шаг перед консультацией</h1>
         <div class="services-grid fade-in">
@@ -2629,6 +2633,28 @@ function switchTab(tabName) {
         case 'booking':
             renderBookingScreen();
             break;
+        case 'club':
+            // [T-005] Вкладка "Клуб"
+            // Показываем loader через renderClubScreen (он сам обрабатывает isLoadingClub)
+            State.isLoadingClub = true;
+            renderClubScreen();
+
+            // Загружаем данные клуба
+            loadClubData()
+                .then(() => {
+                    // Проверяем что мы всё ещё на том же табе
+                    if (State.currentTab === 'club') {
+                        renderClubScreen();
+                    }
+                })
+                .catch((error) => {
+                    console.error('❌ [switchTab:club] Ошибка загрузки данных клуба:', error);
+                    // Рендерим экран даже при ошибке (renderClubScreen показывает fallback UI)
+                    if (State.currentTab === 'club') {
+                        renderClubScreen();
+                    }
+                });
+            break;
         case 'mybookings':
             // Показываем loader сразу
             document.getElementById('app').innerHTML = `
@@ -2691,6 +2717,530 @@ function getServiceDescription(serviceName) {
         'Индивидуальная консультация': 'Персональная консультация с психологом, 1 час'
     };
     return descriptions[serviceName] || '';
+}
+
+// ===== [T-005] ФУНКЦИИ КЛУБА =====
+
+/**
+ * Рассчитывает следующие N воскресений начиная с указанной даты
+ * @param {Date} startDate - Дата начала отсчета
+ * @param {number} count - Количество воскресений (по умолчанию 4)
+ * @returns {Date[]} Массив дат воскресений
+ */
+function getNextSundays(startDate, count = 4) {
+    try {
+        // Валидация входных данных
+        if (!(startDate instanceof Date) || isNaN(startDate.getTime())) {
+            console.error('getNextSundays: невалидная дата', startDate);
+            return [];
+        }
+
+        if (count < 1) {
+            console.error('getNextSundays: count должен быть >= 1', count);
+            return [];
+        }
+
+        const sundays = [];
+        const current = new Date(startDate);
+
+        // Находим ближайшее воскресенье (день недели 0)
+        const daysUntilSunday = (7 - current.getDay()) % 7;
+
+        // Если сегодня не воскресенье, переходим к ближайшему
+        if (daysUntilSunday > 0) {
+            current.setDate(current.getDate() + daysUntilSunday);
+        }
+        // Если сегодня воскресенье, берём следующее
+        else if (current.getDay() === 0) {
+            current.setDate(current.getDate() + 7);
+        }
+
+        // Собираем N воскресений
+        for (let i = 0; i < count; i++) {
+            sundays.push(new Date(current));
+            current.setDate(current.getDate() + 7);  // +7 дней для следующего воскресенья
+        }
+
+        return sundays;
+    } catch (error) {
+        console.error('getNextSundays: ошибка при расчете воскресений', error);
+        return [];
+    }
+}
+
+/**
+ * Загружает данные о платежах клуба из club.json
+ * @returns {Promise<void>}
+ */
+async function loadClubData() {
+    const cacheKey = 'club_data';
+    const cacheTTL = 60000; // 60 секунд
+
+    try {
+        State.isLoadingClub = true;
+
+        // Проверяем кеш
+        const cached = CacheManager.get(cacheKey);
+        if (cached && !cached.isExpired) {
+            console.log('✅ [loadClubData] Используем кеш');
+            const clubData = cached.data;
+
+            // Фильтруем payments по текущему user_id
+            State.clubPayments = clubData.payments.filter(p => p.user_id === USER.id);
+            State.clubZoomLink = clubData.zoom_link || '';
+            console.log(`📋 [loadClubData] Найдено ${State.clubPayments.length} платежей для пользователя ${USER.id}`);
+
+            State.isLoadingClub = false;
+            return;
+        }
+
+        // Загружаем из GitHub
+        console.log('🌐 [loadClubData] Загрузка из GitHub:', CONFIG.CLUB_JSON_URL);
+
+        const response = await fetch(CONFIG.CLUB_JSON_URL, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json'
+            },
+            signal: AbortSignal.timeout(5000) // 5 секунд timeout
+        });
+
+        if (!response.ok) {
+            throw new Error(`GitHub HTTP ${response.status}`);
+        }
+
+        const clubData = await response.json();
+
+        // Валидация структуры
+        if (!clubData.payments || !Array.isArray(clubData.payments)) {
+            throw new Error('Invalid club.json structure: missing payments array');
+        }
+
+        if (!clubData.zoom_link) {
+            console.warn('⚠️ club.json не содержит zoom_link');
+        }
+
+        console.log(`✅ [loadClubData] Загружено ${clubData.payments.length} платежей из GitHub`);
+
+        // Сохраняем в кеш
+        CacheManager.set(cacheKey, clubData, cacheTTL);
+
+        // Фильтруем payments по текущему user_id
+        State.clubPayments = clubData.payments.filter(p => p.user_id === USER.id);
+        State.clubZoomLink = clubData.zoom_link || '';
+        console.log(`📋 [loadClubData] Найдено ${State.clubPayments.length} платежей для пользователя ${USER.id}`);
+
+        State.isLoadingClub = false;
+
+    } catch (error) {
+        State.isLoadingClub = false;
+
+        console.error('❌ [loadClubData] Ошибка загрузки:', error.message);
+
+        // Попытка использовать устаревший кеш при ошибке
+        const cached = CacheManager.get(cacheKey);
+        if (cached) {
+            console.log('📦 [loadClubData] Используем устаревший кеш при ошибке');
+            const clubData = cached.data;
+            State.clubPayments = clubData.payments.filter(p => p.user_id === USER.id);
+            State.clubZoomLink = clubData.zoom_link || '';
+            return;
+        }
+
+        // Нет ни свежих данных, ни кеша
+        State.clubPayments = [];
+        State.clubZoomLink = '';
+        showToast('Не удалось загрузить данные клуба');
+    }
+}
+
+/**
+ * Рендерит HTML карточки встречи клуба
+ * @param {Object} meeting - Объект встречи
+ * @param {Date} meeting.date - Дата встречи
+ * @param {string} meeting.time - Время встречи (например, "17:00")
+ * @param {string} meeting.zoomLink - Ссылка на Zoom встречу
+ * @returns {string} HTML строка карточки встречи
+ */
+function renderClubMeetingCard(meeting) {
+    try {
+        // Валидация входных данных
+        if (!meeting || !(meeting.date instanceof Date) || isNaN(meeting.date.getTime())) {
+            console.error('renderClubMeetingCard: невалидная дата', meeting);
+            return '';
+        }
+
+        if (!meeting.time || typeof meeting.time !== 'string') {
+            console.error('renderClubMeetingCard: невалидное время', meeting);
+            return '';
+        }
+
+        if (!meeting.zoomLink || typeof meeting.zoomLink !== 'string') {
+            console.error('renderClubMeetingCard: невалидная ссылка Zoom', meeting);
+            return '';
+        }
+
+        // Форматируем дату: "Воскресенье, 16 февраля"
+        const dayName = meeting.date.toLocaleDateString('ru-RU', { weekday: 'long' });
+        const day = meeting.date.getDate();
+        const monthName = meeting.date.toLocaleDateString('ru-RU', { month: 'long' });
+        const formattedDate = `${dayName.charAt(0).toUpperCase() + dayName.slice(1)}, ${day} ${monthName}`;
+
+        // Проверка: встреча в прошлом?
+        const now = new Date();
+        const isPast = meeting.date < now;
+
+        return `
+            <div class="service-card glass-card ${isPast ? 'meeting-past' : ''}">
+                <div class="service-header">
+                    <div class="service-icon">📅</div>
+                    <div class="service-info">
+                        <div class="service-name">${formattedDate}</div>
+                        <div class="service-duration">${meeting.time}</div>
+                    </div>
+                </div>
+                ${isPast ? `
+                    <div class="service-footer">
+                        <div class="service-price" style="opacity: 0.5;">Встреча завершена</div>
+                    </div>
+                ` : `
+                    <div class="service-footer">
+                        <button class="service-btn" onclick="openZoomLink('${escapeHtml(meeting.zoomLink)}')">
+                            Подключиться к Zoom →
+                        </button>
+                    </div>
+                `}
+            </div>
+        `;
+    } catch (error) {
+        console.error('renderClubMeetingCard: ошибка рендеринга', error);
+        return '';
+    }
+}
+
+/**
+ * Рендерит экран вкладки "Клуб"
+ * @returns {void}
+ *
+ * Security note: Использует innerHTML только с безопасными данными:
+ * - CONFIG константы (не пользовательский ввод)
+ * - formatPrice() (Intl.NumberFormat - безопасно)
+ * - renderClubMeetingCard() (использует escapeHtml для zoomLink)
+ */
+function renderClubScreen() {
+    try {
+        const container = document.getElementById('app');
+
+        // 1. Показываем loader при загрузке
+        if (State.isLoadingClub) {
+            container.innerHTML = `
+                <h1 class="screen-title fade-in">Встречи клуба - каждое воскресенье в ${CONFIG.CLUB.MEETING_TIME}</h1>
+                <div class="services-grid fade-in">
+                    <div class="service-card glass-card" style="text-align: center; padding: 40px 20px;">
+                        <div class="dates-spinner"></div>
+                        <p style="margin-top: 20px; color: var(--tg-theme-hint-color, #999);">Загрузка данных клуба...</p>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        // 2. Если нет платежей - показываем карточку "Вступить в клуб"
+        if (State.clubPayments.length === 0) {
+            container.innerHTML = `
+                <h1 class="screen-title fade-in">Встречи клуба - каждое воскресенье в ${CONFIG.CLUB.MEETING_TIME}</h1>
+                <div class="services-grid fade-in">
+                    <div class="service-card glass-card">
+                        <div class="service-header">
+                            <div class="service-icon">🏛️</div>
+                            <div class="service-info">
+                                <div class="service-name">Вступить в клуб</div>
+                                <div class="service-duration">4 встречи по воскресеньям</div>
+                            </div>
+                        </div>
+                        <div class="service-description">
+                            Эксклюзивный клуб встреч каждое воскресенье в ${CONFIG.CLUB.MEETING_TIME}. Абонемент на 4 встречи с доступом к закрытой Zoom-комнате.
+                        </div>
+                        <div class="service-footer">
+                            <div class="service-price">${formatPrice(CONFIG.CLUB.PRICE)}</div>
+                            <button class="service-btn" onclick="handleClubPayment()">
+                                Купить абонемент →
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        // 3. Есть платежи - показываем карточки встреч
+        // Берём последний платёж (самый свежий по paid_at)
+        const latestPayment = State.clubPayments.reduce((latest, current) => {
+            const latestDate = new Date(latest.paid_at);
+            const currentDate = new Date(current.paid_at);
+            return currentDate > latestDate ? current : latest;
+        }, State.clubPayments[0]);
+
+        // Рассчитываем 4 воскресенья от даты платежа
+        const paidDate = new Date(latestPayment.paid_at);
+        const sundays = getNextSundays(paidDate, CONFIG.CLUB.MEETINGS_COUNT);
+
+        // Фильтруем прошедшие встречи (сравниваем только даты, без времени)
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);  // Обнуляем время для корректного сравнения
+
+        const upcomingMeetings = sundays.filter(sunday => {
+            const meetingDate = new Date(sunday);
+            meetingDate.setHours(0, 0, 0, 0);
+            return meetingDate >= now;
+        });
+
+        // Формируем карточки встреч
+        const meetingCards = sundays.map(sunday => {
+            return renderClubMeetingCard({
+                date: sunday,
+                time: CONFIG.CLUB.MEETING_TIME,
+                zoomLink: State.clubZoomLink
+            });
+        }).join('');
+
+        // Если все встречи прошли - показываем кнопку "Купить следующий абонемент"
+        const renewButton = upcomingMeetings.length === 0 ? `
+            <div class="service-card glass-card" style="margin-top: 20px;">
+                <div class="service-header">
+                    <div class="service-icon">🎫</div>
+                    <div class="service-info">
+                        <div class="service-name">Все встречи завершены</div>
+                        <div class="service-duration">Купите следующий абонемент</div>
+                    </div>
+                </div>
+                <div class="service-footer">
+                    <div class="service-price">${formatPrice(CONFIG.CLUB.PRICE)}</div>
+                    <button class="service-btn" onclick="handleClubPayment()">
+                        Купить следующий абонемент →
+                    </button>
+                </div>
+            </div>
+        ` : '';
+
+        container.innerHTML = `
+            <h1 class="screen-title fade-in">Встречи клуба - каждое воскресенье в ${CONFIG.CLUB.MEETING_TIME}</h1>
+            <div class="services-grid fade-in">
+                ${meetingCards}
+                ${renewButton}
+            </div>
+        `;
+
+    } catch (error) {
+        console.error('❌ [renderClubScreen] Ошибка рендеринга:', error);
+
+        // Fallback UI при ошибке
+        document.getElementById('app').innerHTML = `
+            <h1 class="screen-title fade-in">Встречи клуба</h1>
+            <div class="services-grid fade-in">
+                <div class="service-card glass-card" style="text-align: center; padding: 40px 20px;">
+                    <p style="color: var(--tg-theme-destructive-text-color, #ff3b30);">
+                        Ошибка загрузки данных клуба
+                    </p>
+                    <button class="service-btn" onclick="switchTab('club')" style="margin-top: 20px;">
+                        Попробовать снова
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+}
+
+/**
+ * Обрабатывает покупку абонемента клуба
+ * @returns {Promise<void>}
+ */
+async function handleClubPayment() {
+    // Защита от двойного клика
+    if (State.isCreatingPayment) {
+        console.log('⚠️ [handleClubPayment] Платёж уже создаётся - игнорируем клик');
+        return;
+    }
+
+    State.isCreatingPayment = true;
+
+    try {
+        console.log('💳 [handleClubPayment] Начало покупки абонемента клуба');
+
+        // Haptic feedback при клике
+        if (tg.HapticFeedback) {
+            tg.HapticFeedback.selectionChanged();
+        }
+
+        // Показываем loading modal
+        showLoadingModal('Создание платежа...');
+
+        // Создаём платёж для клуба
+        const paymentResult = await BookingAPI.request('create_payment', {
+            service: 'club'
+            // amount НЕ передаём - Make.com сам определяет по service_id из CONFIG.SERVICE_PRICES
+        });
+
+        // Скрываем loading modal
+        hideLoadingModal();
+
+        // Проверяем результат
+        if (!paymentResult || !paymentResult.payment_url) {
+            throw new Error('Не получен payment_url от сервера');
+        }
+
+        console.log('✅ [handleClubPayment] Платёж создан, открываем окно оплаты');
+
+        // Открываем окно оплаты
+        openPaymentWindow(paymentResult.payment_url);
+
+        // Показываем попап "Проверяем оплату..." после возврата из YooKassa
+        showLoadingModal('⏳ Проверяем оплату...');
+
+        // Опрашиваем club.json каждые 2 секунды (макс 30 попыток = 60 сек)
+        const maxAttempts = 30;  // Увеличено с 15 до 30 (60 секунд вместо 30)
+        const pollInterval = 2000; // 2 секунды
+        let attempts = 0;
+
+        const pollClubData = async () => {
+            attempts++;
+            console.log(`🔄 [handleClubPayment] Опрос club.json (попытка ${attempts}/${maxAttempts})`);
+
+            try {
+                // Принудительно загружаем свежие данные (игнорируем кеш)
+                const response = await fetch(CONFIG.CLUB_JSON_URL + '?t=' + Date.now(), {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' },
+                    signal: AbortSignal.timeout(5000)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`GitHub HTTP ${response.status}`);
+                }
+
+                const clubData = await response.json();
+                const userPayments = clubData.payments.filter(p => p.user_id === USER.id);
+
+                // Проверяем появился ли новый платёж
+                if (userPayments.length > State.clubPayments.length) {
+                    console.log('✅ [handleClubPayment] Новый платёж найден!');
+
+                    // Обновляем кеш
+                    CacheManager.set('club_data', clubData, 60000);
+
+                    // Обновляем State
+                    State.clubPayments = userPayments;
+                    State.clubZoomLink = clubData.zoom_link || '';
+
+                    // Перерендериваем экран
+                    if (State.currentTab === 'club') {
+                        renderClubScreen();
+                    }
+
+                    // Закрываем попап проверки
+                    hideLoadingModal();
+
+                    // Haptic feedback успеха
+                    if (tg.HapticFeedback) {
+                        tg.HapticFeedback.notificationOccurred('success');
+                    }
+
+                    showToast('✅ Абонемент успешно куплен!');
+                    return; // Прекращаем опрос
+                }
+
+                // Если платёж ещё не появился и есть попытки - повторяем
+                if (attempts < maxAttempts) {
+                    setTimeout(pollClubData, pollInterval);
+                } else {
+                    // Превышен лимит попыток
+                    console.warn('⏱️ [handleClubPayment] Превышен лимит попыток опроса');
+
+                    // Закрываем попап проверки
+                    hideLoadingModal();
+
+                    if (tg.HapticFeedback) {
+                        tg.HapticFeedback.notificationOccurred('warning');
+                    }
+
+                    showToast('Оплата не обнаружена. Если оплатили — переключите таб "Клуб" через минуту. Если нет — нажмите "Купить абонемент" снова.');
+                }
+
+            } catch (error) {
+                console.error('❌ [handleClubPayment] Ошибка опроса club.json:', error);
+
+                // При ошибке продолжаем попытки если не исчерпан лимит
+                if (attempts < maxAttempts) {
+                    setTimeout(pollClubData, pollInterval);
+                } else {
+                    // Закрываем попап проверки
+                    hideLoadingModal();
+
+                    if (tg.HapticFeedback) {
+                        tg.HapticFeedback.notificationOccurred('error');
+                    }
+
+                    showToast('Не удалось проверить статус оплаты. Переключите таб "Клуб" через минуту.');
+                }
+            }
+        };
+
+        // Запускаем опрос
+        setTimeout(pollClubData, pollInterval);
+
+    } catch (error) {
+        // Скрываем loading modal в случае ошибки
+        hideLoadingModal();
+
+        console.error('❌ [handleClubPayment] Ошибка создания платежа:', error);
+
+        // Не показываем ошибку если запрос был отменён
+        if (error.name === 'AbortError' || error.isCancelled) {
+            console.log('ℹ️ [handleClubPayment] Запрос отменён');
+            return;
+        }
+
+        // Haptic feedback ошибки
+        if (tg.HapticFeedback) {
+            tg.HapticFeedback.notificationOccurred('error');
+        }
+
+        showToast('Не удалось создать платёж. Попробуйте позже.');
+
+    } finally {
+        // Всегда снимаем флаг в конце
+        State.isCreatingPayment = false;
+    }
+}
+
+/**
+ * Открывает Zoom-ссылку встречи клуба
+ * @param {string} zoomLink - URL Zoom-встречи
+ * @returns {void}
+ */
+function openZoomLink(zoomLink) {
+    try {
+        console.log('🎥 [openZoomLink] Открытие Zoom-встречи:', zoomLink);
+
+        // Haptic feedback при клике
+        if (tg.HapticFeedback) {
+            tg.HapticFeedback.impactOccurred('light');
+        }
+
+        // Открываем Zoom-ссылку через Telegram
+        tg.openLink(zoomLink);
+
+        console.log('✅ [openZoomLink] Zoom-ссылка открыта');
+
+    } catch (error) {
+        console.error('❌ [openZoomLink] Ошибка открытия Zoom:', error);
+
+        if (tg.HapticFeedback) {
+            tg.HapticFeedback.notificationOccurred('error');
+        }
+
+        showToast('Не удалось открыть Zoom. Попробуйте позже.');
+    }
 }
 
 // ===== ИНИЦИАЛИЗАЦИЯ ПРИЛОЖЕНИЯ =====

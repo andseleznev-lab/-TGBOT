@@ -10,6 +10,19 @@ const CONFIG = {
     // [T-002] URL для slots.json из Git (статический файл)
     SLOTS_JSON_URL: 'https://raw.githubusercontent.com/andseleznev-lab/-TGBOT/main/slots.json',
 
+    // [T-005] URL для club.json из Git (статический файл)
+    CLUB_JSON_URL: 'https://raw.githubusercontent.com/andseleznev-lab/-TGBOT/main/club.json',
+
+    // [T-005] Настройки клуба
+    CLUB: {
+        /** Цена абонемента в рублях */
+        PRICE: 2990,
+        /** Количество встреч в абонементе */
+        MEETINGS_COUNT: 4,
+        /** Время встреч (каждое воскресенье) */
+        MEETING_TIME: '17:00'
+    },
+
     // [T-003] YooKassa payment integration
     YOOKASSA: {
         // Используем существующий main webhook для создания платежей
@@ -23,7 +36,8 @@ const CONFIG = {
         diagnosis: 0,
         package: 75000,
         family: 10000,
-        single: 8000
+        single: 8000,
+        club: 2990  // [T-005] Абонемент клуба
     },
 
     // Статичный список услуг (не загружаем из Make)
