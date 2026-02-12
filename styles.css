@@ -455,8 +455,7 @@ body {
     border-radius: 50% !important;
     box-shadow: 0 4px 12px rgba(212, 165, 116, 0.4);
     transform: scale(1.15);
-    animation: scale-in 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55),
-               pulse-selected 2s ease-in-out 0.3s infinite;
+    animation: pulse-selected 2s ease-in-out infinite;
 }
 
 /* Эффект расходящихся волн для выбранной даты */
