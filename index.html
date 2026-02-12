@@ -108,7 +108,6 @@
                 <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
             </svg>
             <span>Мои записи</span>
-            <span class="badge" id="bookings-badge" style="display: none;">0</span>
         </button>
     </nav>
 
@@ -367,7 +366,7 @@ Telegram User ID: ${window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 'unknow
 
     <!-- 📝 Логирование для проверки загрузки -->
     <script>
-        console.log('✅ index.html loaded - version 36.9 - Added bookings badge counter on My Bookings tab');
+        console.log('✅ index.html loaded - version 36.10 - Removed bookings badge');
         console.log('📦 Files loaded:', {
             telegram: !!window.Telegram,
             config: !!window.CONFIG
