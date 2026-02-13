@@ -1,108 +1,10 @@
 {
-  "generated_at": "2026-02-12T12:13:29.000Z",
+  "generated_at": "2026-02-13T15:26:02.000Z",
   "slots": [
-	{
-		"id": "pslot_71",
-		"date": "12.02.2026",
-		"time": "12:00",
-		"status": "free",
-		"service": "package"
-	},
-	{
-		"id": "pslot_72",
-		"date": "12.02.2026",
-		"time": "14:00",
-		"status": "free",
-		"service": "package"
-	},
-	{
-		"id": "pslot_73",
-		"date": "12.02.2026",
-		"time": "16:00",
-		"status": "free",
-		"service": "package"
-	},
-	{
-		"id": "pslot_74",
-		"date": "12.02.2026",
-		"time": "18:00",
-		"status": "free",
-		"service": "package"
-	},
-	{
-		"id": "fslot_75",
-		"date": "12.02.2026",
-		"time": "10:00",
-		"status": "free",
-		"service": "family"
-	},
-	{
-		"id": "fslot_76",
-		"date": "12.02.2026",
-		"time": "12:00",
-		"status": "free",
-		"service": "family"
-	},
-	{
-		"id": "fslot_77",
-		"date": "12.02.2026",
-		"time": "14:00",
-		"status": "free",
-		"service": "family"
-	},
-	{
-		"id": "fslot_78",
-		"date": "12.02.2026",
-		"time": "16:00",
-		"status": "free",
-		"service": "family"
-	},
-	{
-		"id": "fslot_79",
-		"date": "12.02.2026",
-		"time": "18:00",
-		"status": "free",
-		"service": "family"
-	},
-	{
-		"id": "sslot_81",
-		"date": "12.02.2026",
-		"time": "12:00",
-		"status": "free",
-		"service": "single"
-	},
-	{
-		"id": "sslot_82",
-		"date": "12.02.2026",
-		"time": "14:00",
-		"status": "free",
-		"service": "single"
-	},
-	{
-		"id": "sslot_83",
-		"date": "12.02.2026",
-		"time": "16:00",
-		"status": "free",
-		"service": "single"
-	},
-	{
-		"id": "sslot_84",
-		"date": "12.02.2026",
-		"time": "18:00",
-		"status": "free",
-		"service": "single"
-	},
 	{
 		"id": "dslot_85",
 		"date": "13.02.2026",
 		"time": "10:00",
-		"status": "free",
-		"service": "diagnosis"
-	},
-	{
-		"id": "dslot_86",
-		"date": "13.02.2026",
-		"time": "11:00",
 		"status": "free",
 		"service": "diagnosis"
 	},
@@ -226,13 +128,6 @@
 		"service": "single"
 	},
 	{
-		"id": "sslot_104",
-		"date": "17.02.2026",
-		"time": "12:00",
-		"status": "free",
-		"service": "single"
-	},
-	{
 		"id": "sslot_105",
 		"date": "17.02.2026",
 		"time": "14:00",
@@ -252,13 +147,6 @@
 		"time": "18:00",
 		"status": "free",
 		"service": "single"
-	},
-	{
-		"id": "dslot_108",
-		"date": "18.02.2026",
-		"time": "10:00",
-		"status": "free",
-		"service": "diagnosis"
 	},
 	{
 		"id": "dslot_109",
