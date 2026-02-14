@@ -2785,8 +2785,8 @@ async function loadClubData() {
             console.log('✅ [loadClubData] Используем кеш');
             const clubData = cached.data;
 
-            // Фильтруем payments по текущему user_id
-            State.clubPayments = clubData.payments.filter(p => p.user_id === USER.id);
+            // Фильтруем payments по текущему user_id (user_id в JSON — строка)
+            State.clubPayments = clubData.payments.filter(p => String(p.user_id) === String(USER.id));
             State.clubZoomLink = clubData.zoom_link || '';
             console.log(`📋 [loadClubData] Найдено ${State.clubPayments.length} платежей для пользователя ${USER.id}`);
 
@@ -2825,8 +2825,8 @@ async function loadClubData() {
         // Сохраняем в кеш
         CacheManager.set(cacheKey, clubData, cacheTTL);
 
-        // Фильтруем payments по текущему user_id
-        State.clubPayments = clubData.payments.filter(p => p.user_id === USER.id);
+        // Фильтруем payments по текущему user_id (user_id в JSON — строка)
+        State.clubPayments = clubData.payments.filter(p => String(p.user_id) === String(USER.id));
         State.clubZoomLink = clubData.zoom_link || '';
         console.log(`📋 [loadClubData] Найдено ${State.clubPayments.length} платежей для пользователя ${USER.id}`);
 
@@ -2945,7 +2945,40 @@ function renderClubScreen() {
             return;
         }
 
-        // 2. Если нет платежей - показываем карточку "Вступить в клуб"
+        // 2. Разделяем платежи на success и pending
+        const successPayments = State.clubPayments.filter(p => p.status === 'success');
+        const pendingPayments = State.clubPayments.filter(p => p.status === 'pending');
+
+        // 3. Если нет success, но есть pending - показываем "Ожидает оплаты"
+        if (successPayments.length === 0 && pendingPayments.length > 0) {
+            const pendingPayment = pendingPayments[0]; // Берём первый pending
+
+            container.innerHTML = `
+                <h1 class="screen-title fade-in">Встречи клуба - каждое воскресенье в ${CONFIG.CLUB.MEETING_TIME}</h1>
+                <div class="services-grid fade-in">
+                    <div class="service-card glass-card">
+                        <div class="service-header">
+                            <div class="service-icon">⏳</div>
+                            <div class="service-info">
+                                <div class="service-name">Ожидает оплаты</div>
+                                <div class="service-duration">Платёж ${pendingPayment.payment_id.slice(0, 8)}...</div>
+                            </div>
+                        </div>
+                        <div class="service-description">
+                            Платёж создан, но ещё не оплачен. Если вы закрыли окно оплаты, вернитесь в него или создайте новый платёж.
+                        </div>
+                        <div class="service-footer" style="display: flex; gap: 10px;">
+                            <button class="service-btn" onclick="switchTab('club')" style="flex: 1; background: var(--tg-theme-button-color, #3390ec);">
+                                Обновить →
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        // 4. Если нет платежей вообще - показываем карточку "Вступить в клуб"
         if (State.clubPayments.length === 0) {
             container.innerHTML = `
                 <h1 class="screen-title fade-in">Встречи клуба - каждое воскресенье в ${CONFIG.CLUB.MEETING_TIME}</h1>
@@ -2973,13 +3006,13 @@ function renderClubScreen() {
             return;
         }
 
-        // 3. Есть платежи - показываем карточки встреч
-        // Берём последний платёж (самый свежий по paid_at)
-        const latestPayment = State.clubPayments.reduce((latest, current) => {
+        // 5. Есть success платежи - показываем карточки встреч
+        // Берём последний success платёж (самый свежий по paid_at)
+        const latestPayment = successPayments.reduce((latest, current) => {
             const latestDate = new Date(latest.paid_at);
             const currentDate = new Date(current.paid_at);
             return currentDate > latestDate ? current : latest;
-        }, State.clubPayments[0]);
+        }, successPayments[0]);
 
         // Рассчитываем 4 воскресенья от даты платежа
         const paidDate = new Date(latestPayment.paid_at);
@@ -3052,6 +3085,239 @@ function renderClubScreen() {
 }
 
 /**
+ * Показывает модальное окно подтверждения покупки абонемента клуба
+ * @param {Object} paymentData - данные платежа
+ * @param {string} paymentData.payment_url - URL для оплаты
+ * @param {string} paymentData.payment_id - ID платежа
+ */
+function showClubPaymentConfirmModal(paymentData) {
+    try {
+        console.log('💳 [showClubPaymentConfirmModal] Показ модального окна:', paymentData);
+
+        // Haptic feedback
+        if (tg.HapticFeedback) {
+            tg.HapticFeedback.impactOccurred('light');
+        }
+
+        // Получаем даты следующих 4 воскресений
+        const nextSundays = getNextSundays(new Date(), 4);
+        const sundaysText = nextSundays
+            .map(date => formatDateDMY(date))
+            .join(', ');
+
+        // Форматируем сумму
+        const formattedPrice = CONFIG.CLUB.PRICE.toLocaleString('ru-RU');
+
+        // Создаём HTML модального окна
+        const modalHTML = `
+            <div class="payment-modal-overlay" id="clubPaymentModalOverlay">
+                <div class="payment-modal">
+                    <div class="payment-modal-header">
+                        <span>🎯</span>
+                        <h2>Абонемент в клуб</h2>
+                    </div>
+                    <div class="payment-modal-body">
+                        <div class="payment-detail">
+                            <div class="payment-detail-label">Встречи</div>
+                            <div class="payment-detail-value">${CONFIG.CLUB.MEETINGS_COUNT} воскресенья в ${CONFIG.CLUB.MEETING_TIME}</div>
+                        </div>
+                        <div class="payment-detail">
+                            <div class="payment-detail-label">Даты</div>
+                            <div class="payment-detail-value" style="font-size: 13px; line-height: 1.4;">${sundaysText}</div>
+                        </div>
+                        <div class="payment-amount">
+                            <div class="payment-amount-label">Сумма к оплате</div>
+                            <div class="payment-amount-value">${formattedPrice} ₽</div>
+                        </div>
+                    </div>
+                    <div class="payment-modal-footer">
+                        <button class="payment-modal-button payment-modal-button-primary" id="clubPaymentConfirmBtn">
+                            Оплатить ${formattedPrice} ₽
+                        </button>
+                        <button class="payment-modal-button payment-modal-button-secondary" id="clubPaymentCancelBtn">
+                            Отмена
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Добавляем модалку в DOM
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+        // Получаем элементы
+        const overlay = document.getElementById('clubPaymentModalOverlay');
+        const confirmBtn = document.getElementById('clubPaymentConfirmBtn');
+        const cancelBtn = document.getElementById('clubPaymentCancelBtn');
+
+        // Функция закрытия модалки
+        const closeModal = () => {
+            console.log('🚪 [showClubPaymentConfirmModal] Закрытие модального окна');
+
+            overlay.classList.add('closing');
+            setTimeout(() => {
+                overlay.remove();
+            }, 300); // Время анимации fadeOut
+        };
+
+        // Обработчик кнопки "Оплатить"
+        confirmBtn.addEventListener('click', () => {
+            console.log('✅ [showClubPaymentConfirmModal] Нажата кнопка "Оплатить"');
+
+            // Haptic feedback
+            if (tg.HapticFeedback) {
+                tg.HapticFeedback.notificationOccurred('success');
+            }
+
+            // Закрываем модалку
+            closeModal();
+
+            // Открываем окно оплаты
+            openPaymentWindow(paymentData.payment_url);
+
+            // Показываем попап "Проверяем оплату..." после возврата из YooKassa
+            showLoadingModal('⏳ Проверяем оплату...');
+
+            // Запускаем polling club.json
+            startClubPaymentPolling();
+        });
+
+        // Обработчик кнопки "Отмена"
+        cancelBtn.addEventListener('click', () => {
+            console.log('❌ [showClubPaymentConfirmModal] Нажата кнопка "Отмена"');
+
+            // Haptic feedback
+            if (tg.HapticFeedback) {
+                tg.HapticFeedback.impactOccurred('light');
+            }
+
+            closeModal();
+        });
+
+        // Обработчик клика вне модалки (на overlay)
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                console.log('🚪 [showClubPaymentConfirmModal] Клик вне модалки - закрытие');
+
+                // Haptic feedback
+                if (tg.HapticFeedback) {
+                    tg.HapticFeedback.impactOccurred('light');
+                }
+
+                closeModal();
+            }
+        });
+
+        console.log('✅ [showClubPaymentConfirmModal] Модальное окно показано');
+
+    } catch (error) {
+        console.error('❌ [showClubPaymentConfirmModal] Ошибка показа модального окна:', error);
+        tg.showAlert('Не удалось показать окно подтверждения');
+    }
+}
+
+/**
+ * Запускает polling club.json для проверки оплаты
+ */
+function startClubPaymentPolling() {
+    console.log('🔄 [startClubPaymentPolling] Начало опроса club.json');
+
+    // Опрашиваем club.json каждые 2 секунды (макс 30 попыток = 60 сек)
+    const maxAttempts = 30;  // Увеличено с 15 до 30 (60 секунд вместо 30)
+    const pollInterval = 2000; // 2 секунды
+    let attempts = 0;
+
+    const pollClubData = async () => {
+        attempts++;
+        console.log(`🔄 [startClubPaymentPolling] Опрос club.json (попытка ${attempts}/${maxAttempts})`);
+
+        try {
+            // Принудительно загружаем свежие данные (игнорируем кеш)
+            const response = await fetch(CONFIG.CLUB_JSON_URL + '?t=' + Date.now(), {
+                method: 'GET',
+                headers: { 'Accept': 'application/json' },
+                signal: AbortSignal.timeout(5000)
+            });
+
+            if (!response.ok) {
+                throw new Error(`GitHub HTTP ${response.status}`);
+            }
+
+            const clubData = await response.json();
+            const userPayments = clubData.payments.filter(p => String(p.user_id) === String(USER.id));
+
+            // Проверяем появление success платежа (вместо проверки длины массива)
+            const successPayments = userPayments.filter(p => p.status === 'success');
+            const hadSuccess = State.clubPayments.some(p => p.status === 'success');
+
+            if (successPayments.length > 0 && !hadSuccess) {
+                console.log('✅ [startClubPaymentPolling] Новый платёж найден!');
+
+                // Обновляем кеш
+                CacheManager.set('club_data', clubData, 60000);
+
+                // Обновляем State
+                State.clubPayments = userPayments;
+                State.clubZoomLink = clubData.zoom_link || '';
+
+                // Перерендериваем экран
+                if (State.currentTab === 'club') {
+                    renderClubScreen();
+                }
+
+                // Закрываем попап проверки
+                hideLoadingModal();
+
+                // Haptic feedback успеха
+                if (tg.HapticFeedback) {
+                    tg.HapticFeedback.notificationOccurred('success');
+                }
+
+                showToast('✅ Абонемент успешно куплен!');
+                return; // Прекращаем опрос
+            }
+
+            // Если платёж ещё не появился и есть попытки - повторяем
+            if (attempts < maxAttempts) {
+                setTimeout(pollClubData, pollInterval);
+            } else {
+                // Превышен лимит попыток
+                console.warn('⏱️ [startClubPaymentPolling] Превышен лимит попыток опроса');
+
+                // Закрываем попап проверки
+                hideLoadingModal();
+
+                if (tg.HapticFeedback) {
+                    tg.HapticFeedback.notificationOccurred('warning');
+                }
+
+                showToast('Оплата не обнаружена. Если оплатили — переключите таб "Клуб" через минуту. Если нет — нажмите "Купить абонемент" снова.');
+            }
+
+        } catch (error) {
+            console.error('❌ [startClubPaymentPolling] Ошибка опроса club.json:', error);
+
+            // При ошибке продолжаем попытки если не исчерпан лимит
+            if (attempts < maxAttempts) {
+                setTimeout(pollClubData, pollInterval);
+            } else {
+                // Закрываем попап проверки
+                hideLoadingModal();
+
+                if (tg.HapticFeedback) {
+                    tg.HapticFeedback.notificationOccurred('error');
+                }
+
+                showToast('Ошибка проверки оплаты. Переключите таб "Клуб" через минуту для обновления.');
+            }
+        }
+    };
+
+    // Запускаем первую попытку
+    pollClubData();
+}
+
+/**
  * Обрабатывает покупку абонемента клуба
  * @returns {Promise<void>}
  */
@@ -3089,104 +3355,13 @@ async function handleClubPayment() {
             throw new Error('Не получен payment_url от сервера');
         }
 
-        console.log('✅ [handleClubPayment] Платёж создан, открываем окно оплаты');
+        console.log('✅ [handleClubPayment] Платёж создан, показываем модалку подтверждения');
 
-        // Открываем окно оплаты
-        openPaymentWindow(paymentResult.payment_url);
-
-        // Показываем попап "Проверяем оплату..." после возврата из YooKassa
-        showLoadingModal('⏳ Проверяем оплату...');
-
-        // Опрашиваем club.json каждые 2 секунды (макс 30 попыток = 60 сек)
-        const maxAttempts = 30;  // Увеличено с 15 до 30 (60 секунд вместо 30)
-        const pollInterval = 2000; // 2 секунды
-        let attempts = 0;
-
-        const pollClubData = async () => {
-            attempts++;
-            console.log(`🔄 [handleClubPayment] Опрос club.json (попытка ${attempts}/${maxAttempts})`);
-
-            try {
-                // Принудительно загружаем свежие данные (игнорируем кеш)
-                const response = await fetch(CONFIG.CLUB_JSON_URL + '?t=' + Date.now(), {
-                    method: 'GET',
-                    headers: { 'Accept': 'application/json' },
-                    signal: AbortSignal.timeout(5000)
-                });
-
-                if (!response.ok) {
-                    throw new Error(`GitHub HTTP ${response.status}`);
-                }
-
-                const clubData = await response.json();
-                const userPayments = clubData.payments.filter(p => p.user_id === USER.id);
-
-                // Проверяем появился ли новый платёж
-                if (userPayments.length > State.clubPayments.length) {
-                    console.log('✅ [handleClubPayment] Новый платёж найден!');
-
-                    // Обновляем кеш
-                    CacheManager.set('club_data', clubData, 60000);
-
-                    // Обновляем State
-                    State.clubPayments = userPayments;
-                    State.clubZoomLink = clubData.zoom_link || '';
-
-                    // Перерендериваем экран
-                    if (State.currentTab === 'club') {
-                        renderClubScreen();
-                    }
-
-                    // Закрываем попап проверки
-                    hideLoadingModal();
-
-                    // Haptic feedback успеха
-                    if (tg.HapticFeedback) {
-                        tg.HapticFeedback.notificationOccurred('success');
-                    }
-
-                    showToast('✅ Абонемент успешно куплен!');
-                    return; // Прекращаем опрос
-                }
-
-                // Если платёж ещё не появился и есть попытки - повторяем
-                if (attempts < maxAttempts) {
-                    setTimeout(pollClubData, pollInterval);
-                } else {
-                    // Превышен лимит попыток
-                    console.warn('⏱️ [handleClubPayment] Превышен лимит попыток опроса');
-
-                    // Закрываем попап проверки
-                    hideLoadingModal();
-
-                    if (tg.HapticFeedback) {
-                        tg.HapticFeedback.notificationOccurred('warning');
-                    }
-
-                    showToast('Оплата не обнаружена. Если оплатили — переключите таб "Клуб" через минуту. Если нет — нажмите "Купить абонемент" снова.');
-                }
-
-            } catch (error) {
-                console.error('❌ [handleClubPayment] Ошибка опроса club.json:', error);
-
-                // При ошибке продолжаем попытки если не исчерпан лимит
-                if (attempts < maxAttempts) {
-                    setTimeout(pollClubData, pollInterval);
-                } else {
-                    // Закрываем попап проверки
-                    hideLoadingModal();
-
-                    if (tg.HapticFeedback) {
-                        tg.HapticFeedback.notificationOccurred('error');
-                    }
-
-                    showToast('Не удалось проверить статус оплаты. Переключите таб "Клуб" через минуту.');
-                }
-            }
-        };
-
-        // Запускаем опрос
-        setTimeout(pollClubData, pollInterval);
+        // Показываем модалку подтверждения с информацией о клубе
+        showClubPaymentConfirmModal({
+            payment_url: paymentResult.payment_url,
+            payment_id: paymentResult.payment_id
+        });
 
     } catch (error) {
         // Скрываем loading modal в случае ошибки
