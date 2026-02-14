@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-02-14T15:02:43+03:00",
+  "generated_at": "2026-02-14T15:02:54+03:00",
 "zoom_link": "https://zoom.us/j/123456789?pwd=abc123",
   "payments": [
 	{
 		"amount": "2990.00",
-		"status": "pending",
-		"paid_at": null,
+		"status": "succeeded",
+		"paid_at": "2026-02-14T12:02:41.935Z",
 		"service": "club",
 		"user_id": "156702946",
 		"user_name": "Sam",
