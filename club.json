@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-02-14T19:22:38+03:00",
+  "generated_at": "2026-02-14T19:22:50+03:00",
 "zoom_link": "https://zoom.us/j/123456789?pwd=abc123",
   "payments": [
 	{
 		"amount": "2990.00",
-		"status": "pending",
-		"paid_at": null,
+		"status": "succeeded",
+		"paid_at": "2026-02-14T16:22:36.393Z",
 		"service": "club",
 		"user_id": "662008320",
 		"user_name": "Елена",
