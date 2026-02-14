@@ -3220,13 +3220,129 @@ function showClubPaymentConfirmModal(paymentData) {
 }
 
 /**
+ * Показывает модалку успешной оплаты (когда встречи ещё создаются)
+ */
+function showClubPaymentSuccessModal() {
+    try {
+        console.log('✅ [showClubPaymentSuccessModal] Показ модального окна успешной оплаты');
+
+        // Haptic feedback
+        if (tg.HapticFeedback) {
+            tg.HapticFeedback.notificationOccurred('success');
+        }
+
+        // Создаём HTML модального окна
+        const modalHTML = `
+            <div class="payment-modal-overlay" id="clubSuccessModalOverlay">
+                <div class="payment-modal">
+                    <div class="payment-modal-header">
+                        <span>✅</span>
+                        <h2>Оплата прошла успешно!</h2>
+                    </div>
+                    <div class="payment-modal-body">
+                        <p style="text-align: center; color: var(--tg-theme-hint-color); margin: 0;">
+                            Встречи создаются и появятся в течение минуты.
+                        </p>
+                    </div>
+                    <div class="payment-modal-footer">
+                        <button class="payment-modal-button payment-modal-button-primary" id="clubSuccessRefreshBtn">
+                            🔄 Обновить сейчас
+                        </button>
+                        <button class="payment-modal-button payment-modal-button-secondary" id="clubSuccessCloseBtn">
+                            Закрыть
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Добавляем модалку в DOM
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+        // Получаем элементы
+        const overlay = document.getElementById('clubSuccessModalOverlay');
+        const refreshBtn = document.getElementById('clubSuccessRefreshBtn');
+        const closeBtn = document.getElementById('clubSuccessCloseBtn');
+
+        // Функция закрытия модалки
+        const closeModal = () => {
+            console.log('🚪 [showClubPaymentSuccessModal] Закрытие модального окна');
+            overlay.classList.add('closing');
+            setTimeout(() => {
+                overlay.remove();
+            }, 300);
+        };
+
+        // Обработчик кнопки "Обновить сейчас"
+        refreshBtn.addEventListener('click', async () => {
+            console.log('🔄 [showClubPaymentSuccessModal] Нажата кнопка "Обновить сейчас"');
+
+            // Haptic feedback
+            if (tg.HapticFeedback) {
+                tg.HapticFeedback.impactOccurred('medium');
+            }
+
+            // Закрываем модалку
+            closeModal();
+
+            // Показываем loader
+            State.isLoadingClub = true;
+            renderClubScreen();
+
+            // Загружаем свежие данные
+            await loadClubData(true);
+
+            // Перерендериваем
+            renderClubScreen();
+        });
+
+        // Обработчик кнопки "Закрыть"
+        closeBtn.addEventListener('click', () => {
+            console.log('❌ [showClubPaymentSuccessModal] Нажата кнопка "Закрыть"');
+
+            // Haptic feedback
+            if (tg.HapticFeedback) {
+                tg.HapticFeedback.impactOccurred('light');
+            }
+
+            closeModal();
+
+            // Переключаемся на таб "Клуб" (покажет текущее состояние)
+            if (State.currentTab !== 'club') {
+                switchTab('club');
+            }
+        });
+
+        // Обработчик клика вне модалки (на overlay)
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                console.log('🚪 [showClubPaymentSuccessModal] Клик вне модалки - закрытие');
+
+                // Haptic feedback
+                if (tg.HapticFeedback) {
+                    tg.HapticFeedback.impactOccurred('light');
+                }
+
+                closeModal();
+            }
+        });
+
+        console.log('✅ [showClubPaymentSuccessModal] Модальное окно показано');
+
+    } catch (error) {
+        console.error('❌ [showClubPaymentSuccessModal] Ошибка показа модального окна:', error);
+        showToast('Встречи появятся через минуту. Обновите вкладку "Клуб".');
+    }
+}
+
+/**
  * Запускает polling club.json для проверки оплаты
  */
 function startClubPaymentPolling() {
     console.log('🔄 [startClubPaymentPolling] Начало опроса club.json');
 
-    // Опрашиваем club.json каждые 2 секунды (макс 30 попыток = 60 сек)
-    const maxAttempts = 30;  // Увеличено с 15 до 30 (60 секунд вместо 30)
+    // Опрашиваем club.json каждые 2 секунды (макс 15 попыток = 30 сек)
+    const maxAttempts = 15;  // 30 секунд - достаточно для быстрой проверки
     const pollInterval = 2000; // 2 секунды
     let attempts = 0;
 
@@ -3290,17 +3406,14 @@ function startClubPaymentPolling() {
             if (attempts < maxAttempts) {
                 setTimeout(pollClubData, pollInterval);
             } else {
-                // Превышен лимит попыток
+                // Превышен лимит попыток (30 сек)
                 console.warn('⏱️ [startClubPaymentPolling] Превышен лимит попыток опроса');
 
                 // Закрываем попап проверки
                 hideLoadingModal();
 
-                if (tg.HapticFeedback) {
-                    tg.HapticFeedback.notificationOccurred('warning');
-                }
-
-                showToast('Оплата не обнаружена. Если оплатили — переключите таб "Клуб" через минуту. Если нет — нажмите "Купить абонемент" снова.');
+                // Показываем модалку успешной оплаты (встречи создаются)
+                showClubPaymentSuccessModal();
             }
 
         } catch (error) {
