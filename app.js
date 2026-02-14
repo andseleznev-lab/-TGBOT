@@ -453,7 +453,8 @@ const State = {
     isCreatingPayment: false,  // [T-003] Флаг создания платежа (защита от двойного клика из карточки бронирования)
     clubPayments: [],  // [T-005] Массив платежей клуба для текущего пользователя
     isLoadingClub: false,  // [T-005] Флаг загрузки данных клуба
-    clubZoomLink: ''  // [T-005] Ссылка на Zoom-встречу клуба
+    clubZoomLink: '',  // [T-005] Ссылка на Zoom-встречу клуба
+    clubPaymentProcessing: false  // [UX] Флаг создания встреч после оплаты (GitHub deployment delay)
 };
 
 // 🔧 ИСПРАВЛЕНИЕ 2: Обработка visibility change для корректной работы при выходе/входе
@@ -2792,6 +2793,12 @@ async function loadClubData(forceRefresh = false) {
             State.clubZoomLink = clubData.zoom_link || '';
             console.log(`📋 [loadClubData] Найдено ${State.clubPayments.length} платежей для пользователя ${USER.id}`);
 
+            // Сбрасываем флаг создания встреч если платежи появились
+            if (State.clubPayments.length > 0 && State.clubPaymentProcessing) {
+                State.clubPaymentProcessing = false;
+                console.log('✅ [loadClubData] Встречи появились - сбрасываем флаг clubPaymentProcessing');
+            }
+
             State.isLoadingClub = false;
             return;
             }
@@ -2832,6 +2839,12 @@ async function loadClubData(forceRefresh = false) {
         State.clubPayments = clubData.payments.filter(p => String(p.user_id) === String(USER.id));
         State.clubZoomLink = clubData.zoom_link || '';
         console.log(`📋 [loadClubData] Найдено ${State.clubPayments.length} платежей для пользователя ${USER.id}`);
+
+        // Сбрасываем флаг создания встреч если платежи появились
+        if (State.clubPayments.length > 0 && State.clubPaymentProcessing) {
+            State.clubPaymentProcessing = false;
+            console.log('✅ [loadClubData] Встречи появились - сбрасываем флаг clubPaymentProcessing');
+        }
 
         State.isLoadingClub = false;
 
@@ -2981,8 +2994,37 @@ function renderClubScreen() {
             return;
         }
 
-        // 4. Если нет платежей вообще - показываем карточку "Вступить в клуб"
+        // 4. Если нет платежей вообще
         if (State.clubPayments.length === 0) {
+            // 4a. Если оплата в процессе (GitHub deployment delay) - показываем placeholder
+            if (State.clubPaymentProcessing) {
+                container.innerHTML = `
+                    <h1 class="screen-title fade-in">Встречи клуба - каждое воскресенье в ${CONFIG.CLUB.MEETING_TIME}</h1>
+                    <div class="services-grid fade-in">
+                        <div class="service-card glass-card">
+                            <div class="service-header">
+                                <div class="service-icon">⏳</div>
+                                <div class="service-info">
+                                    <div class="service-name">Встречи создаются...</div>
+                                    <div class="service-duration">Оплата прошла успешно</div>
+                                </div>
+                            </div>
+                            <div class="service-description">
+                                Приглашение на встречи клуба появится через 2-3 минуты.
+                                Встречи создаются автоматически после подтверждения платежа.
+                            </div>
+                            <div class="service-footer">
+                                <button class="service-btn" onclick="(async () => { State.isLoadingClub = true; renderClubScreen(); await loadClubData(true); renderClubScreen(); })()">
+                                    🔄 Обновить →
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            // 4b. Обычная карточка "Вступить в клуб"
             container.innerHTML = `
                 <h1 class="screen-title fade-in">Встречи клуба - каждое воскресенье в ${CONFIG.CLUB.MEETING_TIME}</h1>
                 <div class="services-grid fade-in">
@@ -3231,24 +3273,21 @@ function showClubPaymentSuccessModal() {
             tg.HapticFeedback.notificationOccurred('success');
         }
 
-        // Создаём HTML модального окна
+        // Создаём HTML модального окна (упрощённая версия)
         const modalHTML = `
             <div class="payment-modal-overlay" id="clubSuccessModalOverlay">
                 <div class="payment-modal">
                     <div class="payment-modal-header">
                         <span>✅</span>
-                        <h2>Оплата прошла успешно!</h2>
+                        <h2>Оплата прошла!</h2>
                     </div>
                     <div class="payment-modal-body">
                         <p style="text-align: center; color: var(--tg-theme-hint-color); margin: 0;">
-                            Встречи создаются и появятся в течение минуты.
+                            Приглашение на встречи клуба появится через 2-3 минуты
                         </p>
                     </div>
                     <div class="payment-modal-footer">
-                        <button class="payment-modal-button payment-modal-button-primary" id="clubSuccessRefreshBtn">
-                            🔄 Обновить сейчас
-                        </button>
-                        <button class="payment-modal-button payment-modal-button-secondary" id="clubSuccessCloseBtn">
+                        <button class="payment-modal-button payment-modal-button-primary" id="clubSuccessCloseBtn">
                             Закрыть
                         </button>
                     </div>
@@ -3261,7 +3300,6 @@ function showClubPaymentSuccessModal() {
 
         // Получаем элементы
         const overlay = document.getElementById('clubSuccessModalOverlay');
-        const refreshBtn = document.getElementById('clubSuccessRefreshBtn');
         const closeBtn = document.getElementById('clubSuccessCloseBtn');
 
         // Функция закрытия модалки
@@ -3273,32 +3311,9 @@ function showClubPaymentSuccessModal() {
             }, 300);
         };
 
-        // Обработчик кнопки "Обновить сейчас"
-        refreshBtn.addEventListener('click', async () => {
-            console.log('🔄 [showClubPaymentSuccessModal] Нажата кнопка "Обновить сейчас"');
-
-            // Haptic feedback
-            if (tg.HapticFeedback) {
-                tg.HapticFeedback.impactOccurred('medium');
-            }
-
-            // Закрываем модалку
-            closeModal();
-
-            // Показываем loader
-            State.isLoadingClub = true;
-            renderClubScreen();
-
-            // Загружаем свежие данные
-            await loadClubData(true);
-
-            // Перерендериваем
-            renderClubScreen();
-        });
-
         // Обработчик кнопки "Закрыть"
         closeBtn.addEventListener('click', () => {
-            console.log('❌ [showClubPaymentSuccessModal] Нажата кнопка "Закрыть"');
+            console.log('✅ [showClubPaymentSuccessModal] Нажата кнопка "Закрыть"');
 
             // Haptic feedback
             if (tg.HapticFeedback) {
@@ -3307,7 +3322,7 @@ function showClubPaymentSuccessModal() {
 
             closeModal();
 
-            // Переключаемся на таб "Клуб" (покажет текущее состояние)
+            // Переключаемся на таб "Клуб" (покажет placeholder)
             if (State.currentTab !== 'club') {
                 switchTab('club');
             }
@@ -3331,7 +3346,7 @@ function showClubPaymentSuccessModal() {
 
     } catch (error) {
         console.error('❌ [showClubPaymentSuccessModal] Ошибка показа модального окна:', error);
-        showToast('Встречи появятся через минуту. Обновите вкладку "Клуб".');
+        showToast('Встречи появятся через 2-3 минуты. Обновите вкладку "Клуб".');
     }
 }
 
@@ -3412,8 +3427,16 @@ function startClubPaymentPolling() {
                 // Закрываем попап проверки
                 hideLoadingModal();
 
+                // Устанавливаем флаг создания встреч (GitHub deployment delay)
+                State.clubPaymentProcessing = true;
+
                 // Показываем модалку успешной оплаты (встречи создаются)
                 showClubPaymentSuccessModal();
+
+                // Перерендериваем экран клуба (покажет placeholder)
+                if (State.currentTab === 'club') {
+                    renderClubScreen();
+                }
             }
 
         } catch (error) {
