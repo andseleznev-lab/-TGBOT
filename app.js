@@ -3673,6 +3673,12 @@ async function initApp() {
     if (startParam === 'club') {
         console.log('🔗 [initApp] Обнаружен start_param=club - переключаем на вкладку Клуб');
         switchTab('club');
+
+        // 🔧 FIX: Если пользователь возвращается после оплаты - запускаем polling
+        if (State.clubPaymentProcessing) {
+            console.log('💳 [initApp] Обнаружен флаг clubPaymentProcessing - запускаем polling');
+            startClubPaymentPolling();
+        }
     }
 
     console.log('✅ Приложение инициализировано');
