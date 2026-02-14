@@ -3422,7 +3422,15 @@ function startClubPaymentPolling() {
                 // Превышен лимит попыток (30 сек)
                 console.warn('⏱️ [startClubPaymentPolling] Превышен лимит попыток опроса');
 
-                // Флаг уже установлен, просто перерендериваем экран клуба (покажет лоадер)
+                // Сбрасываем флаг проверки оплаты
+                State.clubPaymentProcessing = false;
+                localStorage.removeItem('clubPaymentProcessing');
+                console.log('🔄 [startClubPaymentPolling] Флаг clubPaymentProcessing сброшен (timeout)');
+
+                // Показываем уведомление
+                showToast('Оплата не подтверждена. Попробуйте обновить страницу через минуту.');
+
+                // Перерендериваем экран клуба (покажет кнопку "Вступить в клуб")
                 if (State.currentTab === 'club') {
                     renderClubScreen();
                 }
@@ -3435,11 +3443,21 @@ function startClubPaymentPolling() {
             if (attempts < maxAttempts) {
                 setTimeout(pollClubData, pollInterval);
             } else {
+                // Сбрасываем флаг проверки оплаты
+                State.clubPaymentProcessing = false;
+                localStorage.removeItem('clubPaymentProcessing');
+                console.log('🔄 [startClubPaymentPolling] Флаг clubPaymentProcessing сброшен (error)');
+
                 if (tg.HapticFeedback) {
                     tg.HapticFeedback.notificationOccurred('error');
                 }
 
                 showToast('Ошибка проверки оплаты. Переключите таб "Клуб" через минуту для обновления.');
+
+                // Перерендериваем экран клуба (покажет кнопку "Вступить в клуб")
+                if (State.currentTab === 'club') {
+                    renderClubScreen();
+                }
             }
         }
     };
