@@ -2797,7 +2797,7 @@ async function loadClubData() {
         // Загружаем из GitHub
         console.log('🌐 [loadClubData] Загрузка из GitHub:', CONFIG.CLUB_JSON_URL);
 
-        const response = await fetch(CONFIG.CLUB_JSON_URL, {
+        const response = await fetch(`${CONFIG.CLUB_JSON_URL}?t=${Date.now()}`, {
             method: 'GET',
             headers: {
                 'Accept': 'application/json'
