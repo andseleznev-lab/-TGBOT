@@ -2639,8 +2639,8 @@ function switchTab(tabName) {
             State.isLoadingClub = true;
             renderClubScreen();
 
-            // Загружаем данные клуба
-            loadClubData()
+            // Загружаем данные клуба (всегда свежие, без кеша)
+            loadClubData(true)
                 .then(() => {
                     // Проверяем что мы всё ещё на том же табе
                     if (State.currentTab === 'club') {
@@ -2770,20 +2770,22 @@ function getNextSundays(startDate, count = 4) {
 
 /**
  * Загружает данные о платежах клуба из club.json
+ * @param {boolean} forceRefresh - Игнорировать кеш и загрузить свежие данные
  * @returns {Promise<void>}
  */
-async function loadClubData() {
+async function loadClubData(forceRefresh = false) {
     const cacheKey = 'club_data';
     const cacheTTL = 60000; // 60 секунд
 
     try {
         State.isLoadingClub = true;
 
-        // Проверяем кеш
-        const cached = CacheManager.get(cacheKey);
-        if (cached && !cached.isExpired) {
-            console.log('✅ [loadClubData] Используем кеш');
-            const clubData = cached.data;
+        // Проверяем кеш (если не форсируем обновление)
+        if (!forceRefresh) {
+            const cached = CacheManager.get(cacheKey);
+            if (cached && !cached.isExpired) {
+                console.log('✅ [loadClubData] Используем кеш');
+                const clubData = cached.data;
 
             // Фильтруем payments по текущему user_id (user_id в JSON — строка)
             State.clubPayments = clubData.payments.filter(p => String(p.user_id) === String(USER.id));
@@ -2792,6 +2794,7 @@ async function loadClubData() {
 
             State.isLoadingClub = false;
             return;
+            }
         }
 
         // Загружаем из GitHub
