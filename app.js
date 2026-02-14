@@ -2639,8 +2639,8 @@ function switchTab(tabName) {
             State.isLoadingClub = true;
             renderClubScreen();
 
-            // Загружаем данные клуба (всегда свежие, без кеша)
-            loadClubData(true)
+            // Загружаем данные клуба (с кешем 60 сек)
+            loadClubData()
                 .then(() => {
                     // Проверяем что мы всё ещё на том же табе
                     if (State.currentTab === 'club') {
