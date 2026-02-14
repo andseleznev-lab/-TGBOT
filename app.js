@@ -3584,7 +3584,15 @@ async function initApp() {
     
     await loadServices();
     renderServicesScreen();
-    
+
+    // 🔧 Обработка автоматического перехода на вкладку "Клуб" (для YooKassa return_url)
+    // Ссылка формата: https://t.me/Testarinalnk_bot/app?startapp=club
+    const startParam = tg.initDataUnsafe?.start_param;
+    if (startParam === 'club') {
+        console.log('🔗 [initApp] Обнаружен start_param=club - переключаем на вкладку Клуб');
+        switchTab('club');
+    }
+
     console.log('✅ Приложение инициализировано');
 }
 

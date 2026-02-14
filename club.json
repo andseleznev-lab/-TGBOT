@@ -1,16 +1,5 @@
 {
-  "generated_at": "2026-02-14T19:22:50+03:00",
-"zoom_link": "https://zoom.us/j/123456789?pwd=abc123",
-  "payments": [
-	{
-		"amount": "2990.00",
-		"status": "succeeded",
-		"paid_at": "2026-02-14T16:22:36.393Z",
-		"service": "club",
-		"user_id": "662008320",
-		"user_name": "Елена",
-		"zoom_link": "https://zoom.us/j/123456789?pwd=abc123",
-		"payment_id": "3122b50c-000f-5001-8000-174d78d27275"
-	}
-]
+  "generated_at": "2026-02-14T20:00:00+03:00",
+  "zoom_link": "https://zoom.us/j/123456789?pwd=abc123",
+  "payments": []
 }
