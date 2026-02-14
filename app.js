@@ -454,7 +454,7 @@ const State = {
     clubPayments: [],  // [T-005] Массив платежей клуба для текущего пользователя
     isLoadingClub: false,  // [T-005] Флаг загрузки данных клуба
     clubZoomLink: '',  // [T-005] Ссылка на Zoom-встречу клуба
-    clubPaymentProcessing: false  // [UX] Флаг создания встреч после оплаты (GitHub deployment delay)
+    clubPaymentProcessing: localStorage.getItem('clubPaymentProcessing') === 'true'  // [UX] Флаг создания встреч после оплаты (сохраняется между сессиями)
 };
 
 // 🔧 ИСПРАВЛЕНИЕ 2: Обработка visibility change для корректной работы при выходе/входе
@@ -2796,6 +2796,7 @@ async function loadClubData(forceRefresh = false) {
             // Сбрасываем флаг создания встреч если платежи появились
             if (State.clubPayments.length > 0 && State.clubPaymentProcessing) {
                 State.clubPaymentProcessing = false;
+                localStorage.removeItem('clubPaymentProcessing');
                 console.log('✅ [loadClubData] Встречи появились - сбрасываем флаг clubPaymentProcessing');
             }
 
@@ -2996,27 +2997,23 @@ function renderClubScreen() {
 
         // 4. Если нет платежей вообще
         if (State.clubPayments.length === 0) {
-            // 4a. Если оплата в процессе (GitHub deployment delay) - показываем placeholder
+            // 4a. Если оплата в процессе (GitHub deployment delay) - показываем лоадер
             if (State.clubPaymentProcessing) {
                 container.innerHTML = `
                     <h1 class="screen-title fade-in">Встречи клуба - каждое воскресенье в ${CONFIG.CLUB.MEETING_TIME}</h1>
                     <div class="services-grid fade-in">
                         <div class="service-card glass-card">
                             <div class="service-header">
-                                <div class="service-icon">⏳</div>
+                                <div class="service-icon">
+                                    <div class="spinner"></div>
+                                </div>
                                 <div class="service-info">
-                                    <div class="service-name">Встречи создаются...</div>
-                                    <div class="service-duration">Оплата прошла успешно</div>
+                                    <div class="service-name">Проверяем оплату...</div>
+                                    <div class="service-duration">Это может занять до 3 минут</div>
                                 </div>
                             </div>
                             <div class="service-description">
-                                Приглашение на встречи клуба появится через 2-3 минуты.
-                                Встречи создаются автоматически после подтверждения платежа.
-                            </div>
-                            <div class="service-footer">
-                                <button class="service-btn" onclick="(async () => { State.isLoadingClub = true; renderClubScreen(); await loadClubData(true); renderClubScreen(); })()">
-                                    🔄 Обновить →
-                                </button>
+                                Приглашение на встречи клуба появится автоматически после подтверждения платежа.
                             </div>
                         </div>
                     </div>
@@ -3220,10 +3217,14 @@ function showClubPaymentConfirmModal(paymentData) {
             // Открываем окно оплаты
             openPaymentWindow(paymentData.payment_url);
 
-            // Показываем попап "Проверяем оплату..." после возврата из YooKassa
-            showLoadingModal('⏳ Проверяем оплату...');
+            // Устанавливаем флаг проверки оплаты (покажем карточку с лоадером)
+            State.clubPaymentProcessing = true;
+            localStorage.setItem('clubPaymentProcessing', 'true');
 
-            // Запускаем polling club.json
+            // Переключаемся на вкладку "Клуб" чтобы показать лоадер
+            switchTab('club');
+
+            // Запускаем polling club.json в фоне (без блокирующей модалки)
             startClubPaymentPolling();
         });
 
@@ -3405,9 +3406,6 @@ function startClubPaymentPolling() {
                     renderClubScreen();
                 }
 
-                // Закрываем попап проверки
-                hideLoadingModal();
-
                 // Haptic feedback успеха
                 if (tg.HapticFeedback) {
                     tg.HapticFeedback.notificationOccurred('success');
@@ -3424,16 +3422,7 @@ function startClubPaymentPolling() {
                 // Превышен лимит попыток (30 сек)
                 console.warn('⏱️ [startClubPaymentPolling] Превышен лимит попыток опроса');
 
-                // Закрываем попап проверки
-                hideLoadingModal();
-
-                // Устанавливаем флаг создания встреч (GitHub deployment delay)
-                State.clubPaymentProcessing = true;
-
-                // Показываем модалку успешной оплаты (встречи создаются)
-                showClubPaymentSuccessModal();
-
-                // Перерендериваем экран клуба (покажет placeholder)
+                // Флаг уже установлен, просто перерендериваем экран клуба (покажет лоадер)
                 if (State.currentTab === 'club') {
                     renderClubScreen();
                 }
@@ -3446,9 +3435,6 @@ function startClubPaymentPolling() {
             if (attempts < maxAttempts) {
                 setTimeout(pollClubData, pollInterval);
             } else {
-                // Закрываем попап проверки
-                hideLoadingModal();
-
                 if (tg.HapticFeedback) {
                     tg.HapticFeedback.notificationOccurred('error');
                 }
