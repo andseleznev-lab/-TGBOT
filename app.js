@@ -2946,7 +2946,7 @@ function renderClubScreen() {
         }
 
         // 2. Разделяем платежи на success и pending
-        const successPayments = State.clubPayments.filter(p => p.status === 'success');
+        const successPayments = State.clubPayments.filter(p => p.status === 'succeeded');
         const pendingPayments = State.clubPayments.filter(p => p.status === 'pending');
 
         // 3. Если нет success, но есть pending - показываем "Ожидает оплаты"
@@ -3247,8 +3247,8 @@ function startClubPaymentPolling() {
             const userPayments = clubData.payments.filter(p => String(p.user_id) === String(USER.id));
 
             // Проверяем появление success платежа (вместо проверки длины массива)
-            const successPayments = userPayments.filter(p => p.status === 'success');
-            const hadSuccess = State.clubPayments.some(p => p.status === 'success');
+            const successPayments = userPayments.filter(p => p.status === 'succeeded');
+            const hadSuccess = State.clubPayments.some(p => p.status === 'succeeded');
 
             if (successPayments.length > 0 && !hadSuccess) {
                 console.log('✅ [startClubPaymentPolling] Новый платёж найден!');
