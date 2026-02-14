@@ -3246,9 +3246,15 @@ function startClubPaymentPolling() {
             const clubData = await response.json();
             const userPayments = clubData.payments.filter(p => String(p.user_id) === String(USER.id));
 
+            // 🔍 DEBUG: что нашли в club.json
+            console.log(`🔍 [DEBUG] Total payments: ${clubData.payments.length}, User payments: ${userPayments.length}`);
+            console.log(`🔍 [DEBUG] State.clubPayments.length: ${State.clubPayments.length}`);
+
             // Проверяем появление success платежа (вместо проверки длины массива)
             const successPayments = userPayments.filter(p => p.status === 'succeeded');
             const hadSuccess = State.clubPayments.some(p => p.status === 'succeeded');
+
+            console.log(`🔍 [DEBUG] successPayments: ${successPayments.length}, hadSuccess: ${hadSuccess}`);
 
             if (successPayments.length > 0 && !hadSuccess) {
                 console.log('✅ [startClubPaymentPolling] Новый платёж найден!');
