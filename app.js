@@ -3358,8 +3358,8 @@ function showClubPaymentSuccessModal() {
 function startBackgroundPolling() {
     console.log('🕒 [startBackgroundPolling] Начало фонового опроса');
 
-    const maxBackgroundAttempts = 30;  // 30 × 10 сек = 5 минут
-    const backgroundInterval = 10000; // 10 секунд
+    const maxBackgroundAttempts = 50;  // 50 × 3 сек = 2.5 минуты
+    const backgroundInterval = 3000; // 3 секунды
     let backgroundAttempts = 0;
 
     const backgroundPoll = async () => {
@@ -3403,7 +3403,7 @@ function startBackgroundPolling() {
                     tg.HapticFeedback.notificationOccurred('success');
                 }
 
-                showToast('✅ Абонемент успешно куплен!');
+                showSuccessPopup('Готово', '✅ Абонемент успешно куплен!');
                 return; // Прекращаем фоновый опрос
             }
 
@@ -3411,7 +3411,7 @@ function startBackgroundPolling() {
             if (backgroundAttempts < maxBackgroundAttempts) {
                 setTimeout(backgroundPoll, backgroundInterval);
             } else {
-                console.warn('⏱️ [startBackgroundPolling] Превышен лимит фонового опроса (5 минут)');
+                console.warn('⏱️ [startBackgroundPolling] Превышен лимит фонового опроса (2.5 минуты)');
                 console.log('ℹ️ [startBackgroundPolling] Переключите вкладку "Клуб" для обновления');
             }
 
