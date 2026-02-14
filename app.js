@@ -3352,6 +3352,84 @@ function showClubPaymentSuccessModal() {
 }
 
 /**
+ * Запускает медленный фоновый polling club.json (после таймаута быстрого)
+ * Опрашивает каждые 10 секунд, максимум 30 попыток (5 минут)
+ */
+function startBackgroundPolling() {
+    console.log('🕒 [startBackgroundPolling] Начало фонового опроса');
+
+    const maxBackgroundAttempts = 30;  // 30 × 10 сек = 5 минут
+    const backgroundInterval = 10000; // 10 секунд
+    let backgroundAttempts = 0;
+
+    const backgroundPoll = async () => {
+        backgroundAttempts++;
+        console.log(`🕒 [startBackgroundPolling] Фоновый опрос (попытка ${backgroundAttempts}/${maxBackgroundAttempts})`);
+
+        try {
+            // Принудительно загружаем свежие данные
+            const response = await fetch(CONFIG.CLUB_JSON_URL + '?t=' + Date.now(), {
+                method: 'GET',
+                headers: { 'Accept': 'application/json' },
+                signal: AbortSignal.timeout(5000)
+            });
+
+            if (!response.ok) {
+                throw new Error(`GitHub HTTP ${response.status}`);
+            }
+
+            const clubData = await response.json();
+            const userPayments = clubData.payments.filter(p => String(p.user_id) === String(USER.id));
+            const successPayments = userPayments.filter(p => p.status === 'succeeded');
+            const hadSuccess = State.clubPayments.some(p => p.status === 'succeeded');
+
+            console.log(`🕒 [DEBUG] Background poll: successPayments=${successPayments.length}, hadSuccess=${hadSuccess}`);
+
+            if (successPayments.length > 0 && !hadSuccess) {
+                console.log('✅ [startBackgroundPolling] Платёж найден в фоновом опросе!');
+
+                // Обновляем кеш и State
+                CacheManager.set('club_data', clubData, 60000);
+                State.clubPayments = userPayments;
+                State.clubZoomLink = clubData.zoom_link || '';
+
+                // Перерендериваем экран
+                if (State.currentTab === 'club') {
+                    renderClubScreen();
+                }
+
+                // Haptic feedback успеха
+                if (tg.HapticFeedback) {
+                    tg.HapticFeedback.notificationOccurred('success');
+                }
+
+                showToast('✅ Абонемент успешно куплен!');
+                return; // Прекращаем фоновый опрос
+            }
+
+            // Продолжаем опрос если не исчерпан лимит
+            if (backgroundAttempts < maxBackgroundAttempts) {
+                setTimeout(backgroundPoll, backgroundInterval);
+            } else {
+                console.warn('⏱️ [startBackgroundPolling] Превышен лимит фонового опроса (5 минут)');
+                console.log('ℹ️ [startBackgroundPolling] Переключите вкладку "Клуб" для обновления');
+            }
+
+        } catch (error) {
+            console.error('❌ [startBackgroundPolling] Ошибка фонового опроса:', error);
+
+            // При ошибке продолжаем попытки
+            if (backgroundAttempts < maxBackgroundAttempts) {
+                setTimeout(backgroundPoll, backgroundInterval);
+            }
+        }
+    };
+
+    // Запускаем первую попытку фонового polling
+    backgroundPoll();
+}
+
+/**
  * Запускает polling club.json для проверки оплаты
  */
 function startClubPaymentPolling() {
@@ -3419,10 +3497,14 @@ function startClubPaymentPolling() {
             if (attempts < maxAttempts) {
                 setTimeout(pollClubData, pollInterval);
             } else {
-                // Превышен лимит попыток (30 сек)
-                console.warn('⏱️ [startClubPaymentPolling] Превышен лимит попыток опроса');
+                // Превышен лимит попыток быстрого опроса (30 сек)
+                console.warn('⏱️ [startClubPaymentPolling] Превышен лимит быстрого опроса');
+                console.log('🕒 [startClubPaymentPolling] Запускаем медленный фоновый опрос (каждые 10 сек)');
 
-                // Флаг уже установлен, просто перерендериваем экран клуба (покажет лоадер)
+                // Запускаем медленный фоновый polling
+                startBackgroundPolling();
+
+                // Перерендериваем экран клуба (покажет лоадер)
                 if (State.currentTab === 'club') {
                     renderClubScreen();
                 }
