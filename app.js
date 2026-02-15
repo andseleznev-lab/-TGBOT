@@ -2089,14 +2089,15 @@ async function confirmBooking() {
     try {
         console.log(`✅ [confirmBooking] Бесплатная услуга - прямое бронирование`);
 
-        showLoader();
+        // [T-007] Loading popup вместо простого loader
+        showLoadingModal('Создание встречи...');
         const result = await BookingAPI.bookSlot(
             State.selectedService,
             State.selectedDate,
             State.selectedSlot,
             State.selectedSlotId  // Передаём ID слота для вебхука
         );
-        hideLoader();
+        hideLoadingModal();
 
         if (result.success) {
             // Попап не показываем - пользователь видит запись в "Мои записи"
@@ -2120,7 +2121,7 @@ async function confirmBooking() {
             switchTab('mybookings');
         }
     } catch (error) {
-        hideLoader();
+        hideLoadingModal();  // [T-007] Используем hideLoadingModal вместо hideLoader
         console.error('Ошибка бронирования:', error);
 
         // Проверяем, это ошибка "слот занят" от Make.com

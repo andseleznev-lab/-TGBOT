@@ -788,6 +788,9 @@ body {
 
 .tab-btn.active {
     color: var(--accent-primary);
+    background: white;
+    border: 1px solid rgba(200, 184, 160, 0.4);
+    box-sizing: border-box;
 }
 
 .tab-icon {
