@@ -370,11 +370,13 @@ async function createPayment(slotId, serviceId) {
             throw error;
         }
 
-        // Показываем понятное сообщение пользователю
-        if (tg.HapticFeedback) {
-            tg.HapticFeedback.notificationOccurred('error');
-        }
-        tg.showAlert('Не удалось создать платёж. Попробуйте позже.');
+        // [T-007] FIX: Используем кастомную модалку (как для бесплатных услуг)
+        // Берём текст из ответа сервера или fallback на дефолтное сообщение
+        const message = error.apiResponse?.message
+            || error.message
+            || 'Не удалось создать платёж. Попробуйте позже.';
+
+        showSlotTakenPopup(message);
 
         throw error;
     }
