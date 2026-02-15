@@ -54,6 +54,193 @@ function getServiceById(serviceId) {
     return STATIC_SERVICES.find(s => s.id === serviceId) || null;
 }
 
+// ===== [T-006] SUPABASE POSTGRESQL + REALTIME =====
+
+/**
+ * Supabase клиент для работы с PostgreSQL + Realtime
+ * @type {Object|null}
+ */
+let supabaseClient = null;
+
+/**
+ * Realtime подписка на платежи клуба
+ * @type {Object|null}
+ */
+let realtimeSubscription = null;
+
+/**
+ * Инициализирует Supabase клиент
+ * @returns {Object|null} Supabase client или null если отключен/ошибка
+ */
+function initSupabase() {
+    if (!CONFIG.SUPABASE.ENABLED) {
+        console.log('⚠️ [Supabase] Отключен (SUPABASE.ENABLED=false), используется club.json');
+        return null;
+    }
+
+    if (!window.supabase) {
+        console.error('❌ [Supabase] SDK не загружен! Проверь index.html');
+        tg.showAlert('Ошибка подключения к базе данных. Попробуйте позже.');
+        return null;
+    }
+
+    if (supabaseClient) {
+        console.log('✅ [Supabase] Уже инициализирован');
+        return supabaseClient;
+    }
+
+    try {
+        supabaseClient = window.supabase.createClient(
+            CONFIG.SUPABASE.URL,
+            CONFIG.SUPABASE.ANON_KEY
+        );
+
+        console.log('🔒 [Security] Supabase connected', {
+            url: CONFIG.SUPABASE.URL,
+            keyType: 'anon',
+            timestamp: new Date().toISOString()
+        });
+
+        return supabaseClient;
+    } catch (error) {
+        console.error('❌ [Supabase] Ошибка инициализации:', error);
+        tg.showAlert('Ошибка подключения к базе данных. Попробуйте позже.');
+        return null;
+    }
+}
+
+/**
+ * [T-006] Подписывается на Realtime события INSERT в таблице club_payments
+ * @param {number} userId - Telegram User ID для фильтрации событий
+ * @returns {void}
+ */
+function subscribeToPayments(userId) {
+    try {
+        // Проверка что Supabase включён
+        if (!CONFIG.SUPABASE.ENABLED || !supabaseClient) {
+            console.log('⚠️ [subscribeToPayments] Supabase отключён');
+            return;
+        }
+
+        // Отписываемся от предыдущей подписки (если есть)
+        if (realtimeSubscription) {
+            console.log('🔌 [subscribeToPayments] Отписываемся от старой подписки');
+            realtimeSubscription.unsubscribe();
+            realtimeSubscription = null;
+        }
+
+        console.log(`🔌 [subscribeToPayments] Создаём подписку для userId=${userId}`);
+
+        // Создаём канал для Realtime
+        realtimeSubscription = supabaseClient
+            .channel('club-payments')
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'club_payments'
+                },
+                (payload) => {
+                    console.log('📨 [Realtime] Получено INSERT событие:', payload);
+                    handleRealtimePayment(payload.new, userId);
+                }
+            )
+            .subscribe((status) => {
+                if (status === 'SUBSCRIBED') {
+                    console.log('✅ [Realtime] Подписка активна');
+                } else if (status === 'CHANNEL_ERROR') {
+                    console.error('❌ [Realtime] Ошибка канала:', status);
+                } else if (status === 'TIMED_OUT') {
+                    console.error('⏱️ [Realtime] Timeout подписки');
+                } else {
+                    console.log(`🔄 [Realtime] Статус: ${status}`);
+                }
+            });
+
+    } catch (error) {
+        console.error('❌ [subscribeToPayments] Ошибка подписки:', error);
+    }
+}
+
+/**
+ * [T-006] Обрабатывает Realtime событие нового платежа
+ * @param {Object} payment - Объект платежа из Supabase {id, payment_id, telegram_user_id, amount, status, created_at}
+ * @param {number} userId - Telegram User ID текущего пользователя
+ * @returns {void}
+ */
+function handleRealtimePayment(payment, userId) {
+    try {
+        console.log('🔍 [handleRealtimePayment] Проверка платежа:', payment);
+
+        // Проверка: платёж принадлежит текущему пользователю
+        if (payment.telegram_user_id !== userId) {
+            console.log(`⏭️ [handleRealtimePayment] Платёж для другого пользователя (${payment.telegram_user_id}), игнорируем`);
+            return;
+        }
+
+        // Проверка: статус succeeded
+        if (payment.status !== 'succeeded') {
+            console.log(`⏭️ [handleRealtimePayment] Статус не succeeded (${payment.status}), игнорируем`);
+            return;
+        }
+
+        console.log('🎉 [handleRealtimePayment] Платёж успешен! Обновляем UI');
+
+        // Haptic feedback
+        if (tg.HapticFeedback) {
+            tg.HapticFeedback.notificationOccurred('success');
+        }
+
+        // Показываем popup успеха
+        showSuccessPopup('✅ Абонемент куплен!', 'Встречи клуба появятся через несколько секунд');
+
+        // Обновляем UI клуба
+        updateClubUIAfterPayment(payment);
+
+    } catch (error) {
+        console.error('❌ [handleRealtimePayment] Ошибка обработки:', error);
+    }
+}
+
+/**
+ * [T-006] Обновляет UI вкладки "Клуб" после получения нового платежа
+ * @param {Object} payment - Объект платежа из Supabase
+ * @returns {void}
+ */
+function updateClubUIAfterPayment(payment) {
+    try {
+        console.log('🔄 [updateClubUIAfterPayment] Обновление UI для платежа:', payment.payment_id);
+
+        // Добавляем платёж в State (с трансформацией для совместимости)
+        const transformedPayment = {
+            ...payment,
+            paid_at: payment.created_at, // Алиас для совместимости
+            user_id: payment.telegram_user_id // Алиас для совместимости
+        };
+
+        State.clubPayments.push(transformedPayment);
+
+        // Сбрасываем флаг ожидания оплаты (если был)
+        if (State.clubPaymentProcessing) {
+            State.clubPaymentProcessing = false;
+            localStorage.removeItem('clubPaymentProcessing');
+            console.log('✅ [updateClubUIAfterPayment] Сбросили флаг clubPaymentProcessing');
+        }
+
+        // Обновляем UI только если пользователь на вкладке "Клуб"
+        if (State.currentTab === 'club') {
+            console.log('🎨 [updateClubUIAfterPayment] Перерисовываем вкладку "Клуб"');
+            renderClubScreen();
+        } else {
+            console.log('⏭️ [updateClubUIAfterPayment] Пользователь не на вкладке "Клуб", пропускаем рендер');
+        }
+
+    } catch (error) {
+        console.error('❌ [updateClubUIAfterPayment] Ошибка обновления UI:', error);
+    }
+}
+
 // ===== [T-003] YOOKASSA PAYMENT FUNCTIONS =====
 
 /**
@@ -2604,13 +2791,20 @@ function switchTab(tabName) {
             delete State.requestControllers[context];
         }
     });
-    
+
     // 🔧 ИСПРАВЛЕНИЕ 15: Очищаем таймауты
     if (State.bookingsLoadTimeout) {
         clearTimeout(State.bookingsLoadTimeout);
         State.bookingsLoadTimeout = null;
     }
-    
+
+    // [T-006] Отписываемся от Realtime при переключении вкладки (если переходим не на club)
+    if (tabName !== 'club' && realtimeSubscription) {
+        console.log('🔌 [switchTab] Отписываемся от Realtime (переход с вкладки "Клуб")');
+        realtimeSubscription.unsubscribe();
+        realtimeSubscription = null;
+    }
+
     State.currentTab = tabName;
     
     document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -2646,6 +2840,9 @@ function switchTab(tabName) {
                     // Проверяем что мы всё ещё на том же табе
                     if (State.currentTab === 'club') {
                         renderClubScreen();
+
+                        // [T-006] Подписываемся на Realtime после успешной загрузки
+                        subscribeToPayments(USER.id);
                     }
                 })
                 .catch((error) => {
@@ -2770,6 +2967,95 @@ function getNextSundays(startDate, count = 4) {
 }
 
 /**
+ * [T-006] Загружает платежи пользователя из Supabase
+ * @param {number} userId - Telegram User ID
+ * @returns {Promise<Array>} Массив платежей [{id, payment_id, amount, status, created_at}] или [] при ошибке
+ */
+async function loadUserPayments(userId) {
+    try {
+        // Проверка что Supabase включён
+        if (!CONFIG.SUPABASE.ENABLED) {
+            console.log('⚠️ [loadUserPayments] Supabase отключён (ENABLED=false)');
+            return [];
+        }
+
+        // Проверка что клиент инициализирован
+        if (!supabaseClient) {
+            console.error('❌ [loadUserPayments] Supabase клиент не инициализирован');
+            return [];
+        }
+
+        console.log(`🔍 [loadUserPayments] Загрузка платежей для userId=${userId}`);
+
+        // SELECT из club_payments с фильтрами
+        const { data, error } = await supabaseClient
+            .from('club_payments')
+            .select('id, payment_id, telegram_user_id, amount, status, created_at, payment_data')
+            .eq('telegram_user_id', userId)
+            .eq('status', 'succeeded')
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error('❌ [loadUserPayments] Ошибка запроса:', error);
+            return [];
+        }
+
+        console.log(`✅ [loadUserPayments] Найдено ${data.length} платежей`);
+        return data || [];
+
+    } catch (error) {
+        console.error('❌ [loadUserPayments] Исключение:', error);
+        return [];
+    }
+}
+
+/**
+ * [T-006] Вычисляет 4 встречи клуба (воскресенья) начиная с даты платежа
+ * @param {string|Date} paymentDate - Дата платежа (ISO string или Date объект)
+ * @returns {Array<Object>} Массив из 4 встреч: [{date: Date, formatted: "DD.MM.YYYY", time: "17:00"}]
+ */
+function calculateMeetings(paymentDate) {
+    try {
+        // Парсинг даты
+        const date = typeof paymentDate === 'string' ? new Date(paymentDate) : paymentDate;
+
+        if (!(date instanceof Date) || isNaN(date.getTime())) {
+            console.error('❌ [calculateMeetings] Невалидная дата:', paymentDate);
+            return [];
+        }
+
+        // Используем существующую функцию для вычисления воскресений
+        const sundays = getNextSundays(date, CONFIG.CLUB.MEETINGS_COUNT);
+
+        if (sundays.length === 0) {
+            console.error('❌ [calculateMeetings] Не удалось вычислить воскресенья');
+            return [];
+        }
+
+        // Форматируем встречи
+        const meetings = sundays.map(sunday => {
+            const day = String(sunday.getDate()).padStart(2, '0');
+            const month = String(sunday.getMonth() + 1).padStart(2, '0');
+            const year = sunday.getFullYear();
+            const formatted = `${day}.${month}.${year}`;
+
+            return {
+                date: sunday,
+                formatted: formatted,
+                time: CONFIG.CLUB.MEETING_TIME
+            };
+        });
+
+        console.log(`✅ [calculateMeetings] Рассчитано ${meetings.length} встреч:`, meetings.map(m => m.formatted));
+        return meetings;
+
+    } catch (error) {
+        console.error('❌ [calculateMeetings] Ошибка:', error);
+        return [];
+    }
+}
+
+/**
  * Загружает данные о платежах клуба из club.json
  * @param {boolean} forceRefresh - Игнорировать кеш и загрузить свежие данные
  * @returns {Promise<void>}
@@ -2780,6 +3066,43 @@ async function loadClubData(forceRefresh = false) {
 
     try {
         State.isLoadingClub = true;
+
+        // [T-006] СУТЬ: Если Supabase включён - грузим оттуда, иначе fallback на club.json
+        if (CONFIG.SUPABASE.ENABLED && supabaseClient) {
+            console.log('🔄 [loadClubData] Используем Supabase PostgreSQL');
+
+            try {
+                // Загружаем платежи из Supabase
+                const payments = await loadUserPayments(USER.id);
+
+                // Трансформируем в формат для State (добавляем paid_at как алиас created_at)
+                State.clubPayments = payments.map(p => ({
+                    ...p,
+                    paid_at: p.created_at, // Алиас для совместимости с club.json форматом
+                    user_id: p.telegram_user_id // Алиас для совместимости
+                }));
+
+                State.clubZoomLink = CONFIG.CLUB.ZOOM_LINK;
+                console.log(`✅ [loadClubData] Supabase: найдено ${State.clubPayments.length} платежей`);
+
+                // Сбрасываем флаг создания встреч если платежи появились
+                if (State.clubPayments.length > 0 && State.clubPaymentProcessing) {
+                    State.clubPaymentProcessing = false;
+                    localStorage.removeItem('clubPaymentProcessing');
+                    console.log('✅ [loadClubData] Встречи появились - сбрасываем флаг clubPaymentProcessing');
+                }
+
+                State.isLoadingClub = false;
+                return; // Успешно загрузили из Supabase - выходим
+
+            } catch (supabaseError) {
+                console.error('❌ [loadClubData] Supabase ошибка, переключаемся на club.json fallback:', supabaseError);
+                // Продолжаем выполнение для fallback на club.json
+            }
+        }
+
+        // [T-006] FALLBACK: club.json (если Supabase отключён или ошибка)
+        console.log('🔄 [loadClubData] Используем club.json fallback');
 
         // Проверяем кеш (если не форсируем обновление)
         if (!forceRefresh) {
@@ -3636,7 +3959,10 @@ function openZoomLink(zoomLink) {
 async function initApp() {
     console.log('🚀 Mini App initialized for user:', USER.fullName);
     console.log('📱 Telegram Web App version:', tg.version);
-    
+
+    // [T-006] Инициализация Supabase
+    initSupabase();
+
     // Настройка обработчиков табов
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -3698,6 +4024,15 @@ window.addEventListener('unhandledrejection', (event) => {
     // Не показываем alert для отменённых запросов
     if (event.reason && !event.reason.isCancelled) {
         // Можно добавить отправку логов на сервер
+    }
+});
+
+// [T-006] Cleanup при закрытии приложения
+window.addEventListener('beforeunload', () => {
+    console.log('🔌 [beforeunload] Отписываемся от Realtime перед закрытием');
+    if (realtimeSubscription) {
+        realtimeSubscription.unsubscribe();
+        realtimeSubscription = null;
     }
 });
 

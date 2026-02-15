@@ -20,7 +20,19 @@ const CONFIG = {
         /** Количество встреч в абонементе */
         MEETINGS_COUNT: 4,
         /** Время встреч (каждое воскресенье) */
-        MEETING_TIME: '17:00'
+        MEETING_TIME: '17:00',
+        /** Zoom ссылка для встреч клуба */
+        ZOOM_LINK: 'https://zoom.us/j/your-meeting-id'
+    },
+
+    // [T-006] Supabase PostgreSQL + Realtime
+    SUPABASE: {
+        /** URL проекта Supabase */
+        URL: 'https://ujldixoiaqybtnifzhgy.supabase.co',
+        /** Публичный anon ключ (безопасно для фронтенда) */
+        ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVqbGRpeG9pYXF5YnRuaWZ6aGd5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk4NTkyMDgsImV4cCI6MjA4NTQzNTIwOH0.rHbW1w3XZdcW1XcjQXz3jfFrWA0SzR6K851MAxMSV_E',
+        /** Флаг миграции (true = Supabase, false = club.json fallback) */
+        ENABLED: true
     },
 
     // [T-003] YooKassa payment integration
