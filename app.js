@@ -193,7 +193,7 @@ function handleRealtimePayment(payment, userId) {
         }
 
         // Показываем popup успеха
-        showSuccessPopup('✅ Абонемент куплен!', 'Встречи клуба появятся через несколько секунд');
+        showSuccessPopup('Подписка оформлена!', 'Встречи клуба появятся через несколько секунд');
 
         // Обновляем UI клуба
         updateClubUIAfterPayment(payment);
@@ -3082,7 +3082,9 @@ async function loadClubData(forceRefresh = false) {
                     user_id: p.telegram_user_id // Алиас для совместимости
                 }));
 
-                State.clubZoomLink = CONFIG.CLUB.ZOOM_LINK;
+                // Берём zoom_link из первого платежа (все платежи имеют одинаковую ссылку)
+                // Fallback на CONFIG если у платежа нет ссылки
+                State.clubZoomLink = payments[0]?.zoom_link || CONFIG.CLUB.ZOOM_LINK;
                 console.log(`✅ [loadClubData] Supabase: найдено ${State.clubPayments.length} платежей`);
 
                 // Сбрасываем флаг создания встреч если платежи появились
@@ -3350,19 +3352,19 @@ function renderClubScreen() {
                 <div class="services-grid fade-in">
                     <div class="service-card glass-card">
                         <div class="service-header">
-                            <div class="service-icon">🏛️</div>
+                            <div class="service-icon"></div>
                             <div class="service-info">
-                                <div class="service-name">Вступить в клуб</div>
+                                <div class="service-name">Закрытый психологический клуб</div>
                                 <div class="service-duration">4 встречи по воскресеньям</div>
                             </div>
                         </div>
                         <div class="service-description">
-                            Эксклюзивный клуб встреч каждое воскресенье в ${CONFIG.CLUB.MEETING_TIME}. Абонемент на 4 встречи с доступом к закрытой Zoom-комнате.
+                            Подписка на месяц- это 4 встречи с психологом в группе
                         </div>
                         <div class="service-footer">
                             <div class="service-price">${formatPrice(CONFIG.CLUB.PRICE)}</div>
                             <button class="service-btn" onclick="handleClubPayment()">
-                                Купить абонемент →
+                                Купить подписку
                             </button>
                         </div>
                     </div>

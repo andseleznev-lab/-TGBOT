@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS club_payments (
   telegram_user_id BIGINT NOT NULL,
   amount INTEGER NOT NULL,
   status TEXT NOT NULL,
+  zoom_link TEXT,
 
   -- Метаданные
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -137,6 +138,9 @@ COMMENT ON COLUMN club_payments.amount IS
 
 COMMENT ON COLUMN club_payments.status IS
 'Статус платежа: pending, succeeded, canceled';
+
+COMMENT ON COLUMN club_payments.zoom_link IS
+'Zoom ссылка для встреч клуба (одинаковая для всех встреч)';
 
 COMMENT ON COLUMN club_payments.payment_data IS
 'Дополнительные данные от YooKassa (JSONB): email, receipt, metadata';
