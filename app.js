@@ -3403,20 +3403,19 @@ function renderClubScreen() {
             });
         }).join('');
 
-        // Если все встречи прошли - показываем кнопку "Купить следующий абонемент"
+        // Если все встречи прошли - показываем кнопку продления подписки
         const renewButton = upcomingMeetings.length === 0 ? `
             <div class="service-card glass-card" style="margin-top: 20px;">
                 <div class="service-header">
-                    <div class="service-icon">🎫</div>
                     <div class="service-info">
-                        <div class="service-name">Все встречи завершены</div>
-                        <div class="service-duration">Купите следующий абонемент</div>
+                        <div class="service-name">Увы, подписка закончилась</div>
+                        <div class="service-duration">Следующий абонемент — 4 новые встречи</div>
                     </div>
                 </div>
                 <div class="service-footer">
                     <div class="service-price">${formatPrice(CONFIG.CLUB.PRICE)}</div>
                     <button class="service-btn" onclick="handleClubPayment()">
-                        Купить следующий абонемент →
+                        Продлить подписку
                     </button>
                 </div>
             </div>
