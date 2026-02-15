@@ -917,7 +917,9 @@ class BookingAPI {
 
             // Парсим ответ
             console.log(`📄 [${action}] Чтение текста...`);
-            const text = await response.text();
+            const rawText = await response.text();
+            // [T-007] FIX: Удаляем невидимые символы (zero-width space, BOM, etc)
+            const text = rawText.replace(/[\u200B-\u200D\uFEFF]/g, '');
             console.log(`🔍 [${action}] RAW response:`, text.substring(0, 200) + '...');
 
             let result;
@@ -2124,16 +2126,13 @@ async function confirmBooking() {
         hideLoadingModal();  // [T-007] Используем hideLoadingModal вместо hideLoader
         console.error('Ошибка бронирования:', error);
 
-        // Проверяем, это ошибка "слот занят" от Make.com
-        if (error.apiResponse?.slot_status === 'book') {
-            // Показываем кастомный попап с сообщением из JSON
-            const message = error.apiResponse.message || error.message;
-            showSlotTakenPopup(message);
-        } else {
-            // Обычная ошибка - стандартный alert
-            tg.showAlert('Не удалось создать запись. Попробуйте позже.');
-            tg.HapticFeedback.notificationOccurred('error');
-        }
+        // [T-007] FIX: Всегда используем кастомную модалку
+        // Берём текст из ответа сервера или fallback на дефолтное сообщение
+        const message = error.apiResponse?.message
+            || error.message
+            || 'Не удалось создать запись. Попробуйте позже.';
+
+        showSlotTakenPopup(message);
     } finally {
         State.isBooking = false;  // Всегда разблокируем после завершения
     }
