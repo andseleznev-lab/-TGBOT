@@ -3352,14 +3352,13 @@ function renderClubScreen() {
                 <div class="services-grid fade-in">
                     <div class="service-card glass-card">
                         <div class="service-header">
-                            <div class="service-icon"></div>
                             <div class="service-info">
                                 <div class="service-name">Закрытый психологический клуб</div>
                                 <div class="service-duration">4 встречи по воскресеньям</div>
                             </div>
                         </div>
                         <div class="service-description">
-                            Подписка на месяц- это 4 встречи с психологом в группе
+                            Эффективная работа с психологом в группе
                         </div>
                         <div class="service-footer">
                             <div class="service-price">${formatPrice(CONFIG.CLUB.PRICE)}</div>
