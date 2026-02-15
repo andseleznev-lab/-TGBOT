@@ -2990,7 +2990,7 @@ async function loadUserPayments(userId) {
         // SELECT из club_payments с фильтрами
         const { data, error } = await supabaseClient
             .from('club_payments')
-            .select('id, payment_id, telegram_user_id, amount, status, created_at, payment_data')
+            .select('id, payment_id, telegram_user_id, amount, status, created_at, payment_data, zoom_link')
             .eq('telegram_user_id', userId)
             .eq('status', 'succeeded')
             .order('created_at', { ascending: false });
