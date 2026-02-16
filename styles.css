@@ -1366,6 +1366,32 @@ body {
     background: rgba(200, 184, 160, 0.2);
 }
 
+/* Кнопка "Ознакомился" */
+.consent-btn {
+    width: 100%;
+    padding: 16px;
+    background: #C8B8A0; /* Бежевый */
+    color: #2C2C2C; /* Тёмный текст */
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 8px rgba(200, 184, 160, 0.3);
+}
+
+.consent-btn:hover {
+    background: #B8A890; /* Темнее при hover */
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(200, 184, 160, 0.4);
+}
+
+.consent-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(200, 184, 160, 0.3);
+}
+
 @keyframes fadeInScale {
     from {
         opacity: 0;

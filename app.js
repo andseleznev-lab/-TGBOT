@@ -1495,7 +1495,7 @@ function showConsentModal() {
     overlay.style.left = '0';
     overlay.style.width = '100%';
     overlay.style.height = '100%';
-    overlay.style.background = 'rgba(0, 0, 0, 0.5)';
+    overlay.style.background = 'rgba(200, 184, 160, 0.5)'; // Бежевый полупрозрачный
     overlay.style.zIndex = '10000';
 
     // Haptic feedback (уведомление)
