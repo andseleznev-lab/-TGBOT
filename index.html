@@ -7,7 +7,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <title>Запись на консультацию</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <link rel="stylesheet" href="styles.css?v=65">
+    <link rel="stylesheet" href="styles.css?v=66">
     
     <!-- 🔧 СТИЛИ ДЛЯ КНОПОК ОТЛАДКИ -->
     <style>
@@ -389,23 +389,25 @@ Telegram User ID: ${window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 'unknow
         console.log('📋 Для копирования нажмите кнопку "📋 Копировать"');
     </script>
 
-    <!-- 🔧 ERUDA DevTools для мобильной отладки -->
+    <!-- 🔧 ERUDA DevTools (временно отключено) -->
+    <!--
     <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
     <script>
         eruda.init();
         console.log('🔧 Eruda DevTools initialized');
     </script>
+    -->
 
     <!-- Supabase SDK для PostgreSQL + Realtime (T-006) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
 
     <!-- Основные скрипты приложения -->
     <script src="config.js?v=30"></script>
-    <script src="app.js?v=65"></script>
+    <script src="app.js?v=66"></script>
 
     <!-- 📝 Логирование для проверки загрузки -->
     <script>
-        console.log('✅ index.html loaded - version 65 - T-008: Offer text + consent logging for club payments');
+        console.log('✅ index.html loaded - version 66 - Services reorder + Eruda hidden');
         console.log('📦 Files loaded:', {
             telegram: !!window.Telegram,
             config: !!window.CONFIG
