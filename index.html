@@ -7,7 +7,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <title>Запись на консультацию</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <link rel="stylesheet" href="styles.css?v=53">
+    <link rel="stylesheet" href="styles.css?v=54">
     
     <!-- 🔧 СТИЛИ ДЛЯ КНОПОК ОТЛАДКИ -->
     <style>
@@ -399,12 +399,12 @@ Telegram User ID: ${window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 'unknow
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
 
     <!-- Основные скрипты приложения -->
-    <script src="config.js?v=29"></script>
-    <script src="app.js?v=53"></script>
+    <script src="config.js?v=30"></script>
+    <script src="app.js?v=54"></script>
 
     <!-- 📝 Логирование для проверки загрузки -->
     <script>
-        console.log('✅ index.html loaded - version 53 - T-008: Политика конфиденциальности и согласие на ПД');
+        console.log('✅ index.html loaded - version 54 - T-008: FIX modal overlay z-index + text overflow');
         console.log('📦 Files loaded:', {
             telegram: !!window.Telegram,
             config: !!window.CONFIG

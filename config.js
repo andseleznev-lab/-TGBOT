@@ -160,3 +160,8 @@ function generateRequestId() {
 console.log('Mini App initialized');
 console.log('User:', USER);
 console.log('Webhook URL:', CONFIG.API.main);
+
+// [T-008] Экспорт в window для глобального доступа и проверки загрузки
+window.CONFIG = CONFIG;
+window.USER = USER;
+window.generateRequestId = generateRequestId;
