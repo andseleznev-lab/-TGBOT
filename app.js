@@ -1442,6 +1442,119 @@ function hideLoadingModal() {
 }
 
 /**
+ * [T-008] Логирует согласие пользователя в Supabase через Make.com webhook
+ * @param {number} userId - Telegram user ID
+ * @param {string} username - Telegram username или first_name
+ * @param {string} consentType - Тип согласия (privacy_policy, personal_data, offer_contract_booking)
+ * @returns {Promise<void>}
+ */
+async function logConsent(userId, username, consentType) {
+    const webhookUrl = CONFIG.CONSENTS.WEBHOOK_URL;
+
+    if (!webhookUrl) {
+        console.warn('[T-008] Consent webhook URL not configured, skipping logging');
+        return; // Не блокируем UX, если webhook не настроен
+    }
+
+    const payload = {
+        telegram_user_id: userId,
+        telegram_username: username,
+        consent_type: consentType,
+        consent_given: true,
+        policy_version: CONFIG.CONSENTS.POLICY_VERSION,
+        user_agent: navigator.userAgent // Для юридической защиты (опционально)
+    };
+
+    const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    console.log(`[T-008] Logged consent: ${consentType} for user ${userId}`);
+}
+
+/**
+ * [T-008] Показывает модалку согласия на политику конфиденциальности
+ */
+function showConsentModal() {
+    const overlay = document.getElementById('consent-modal-overlay');
+    if (!overlay) {
+        console.error('[T-008] Consent modal overlay not found');
+        return;
+    }
+
+    overlay.style.display = 'flex'; // Показать модалку
+
+    // Haptic feedback (уведомление)
+    tg.HapticFeedback.notificationOccurred('warning');
+
+    // Обработчик кнопки "Согласен и продолжить"
+    const agreeBtn = document.getElementById('consent-agree-btn');
+    if (agreeBtn) {
+        agreeBtn.onclick = handleConsentAgree;
+    }
+
+    // Блокировка закрытия по клику вне модалки
+    overlay.onclick = (e) => {
+        if (e.target === overlay) {
+            // Не закрывать! Пользователь ДОЛЖЕН согласиться
+            tg.HapticFeedback.notificationOccurred('error');
+        }
+    };
+
+    console.log('[T-008] Consent modal shown');
+}
+
+/**
+ * [T-008] Обработчик нажатия кнопки "Согласен и продолжить"
+ * Логирует два согласия: privacy_policy и personal_data
+ */
+async function handleConsentAgree() {
+    const userId = tg.initDataUnsafe?.user?.id;
+    const username = tg.initDataUnsafe?.user?.username ||
+                     tg.initDataUnsafe?.user?.first_name ||
+                     'Unknown';
+
+    // Haptic feedback
+    tg.HapticFeedback.notificationOccurred('success');
+
+    // Показать loading (используем существующую функцию)
+    showLoadingModal('Сохранение согласия...');
+
+    try {
+        // Логируем ОБА согласия в Supabase через Make.com
+        await Promise.all([
+            logConsent(userId, username, 'privacy_policy'),
+            logConsent(userId, username, 'personal_data')
+        ]);
+
+        // Сохраняем в localStorage (чтобы не показывать модалку повторно)
+        localStorage.setItem(`consent_given_${userId}`, 'true');
+
+        // Закрываем модалку
+        const overlay = document.getElementById('consent-modal-overlay');
+        if (overlay) overlay.style.display = 'none';
+
+        hideLoadingModal();
+
+        console.log('[T-008] Consent saved successfully');
+
+    } catch (error) {
+        hideLoadingModal();
+        console.error('[T-008] Failed to save consent:', error);
+
+        // Показываем ошибку пользователю
+        tg.showAlert('Не удалось сохранить согласие. Попробуйте позже.');
+        tg.HapticFeedback.notificationOccurred('error');
+    }
+}
+
+/**
  * Показывает кастомный попап успеха
  * @param {string} title Заголовок попапа
  * @param {string} message Текст сообщения
@@ -4038,9 +4151,33 @@ window.addEventListener('beforeunload', () => {
     }
 });
 
+// [T-008] Проверка согласия на политику конфиденциальности
+function checkAndShowConsentModal() {
+    const userId = tg.initDataUnsafe?.user?.id;
+
+    // Если нет user_id (не должно быть в Telegram WebApp), пропускаем
+    if (!userId) {
+        console.warn('[T-008] User ID not found, skipping consent modal');
+        return;
+    }
+
+    const consentGiven = localStorage.getItem(`consent_given_${userId}`);
+
+    if (!consentGiven) {
+        // Пользователь ещё не согласился → показываем модалку
+        showConsentModal();
+    } else {
+        console.log('[T-008] Consent already given, skipping modal');
+    }
+}
+
 // Запуск при загрузке страницы
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initApp);
+    document.addEventListener('DOMContentLoaded', () => {
+        checkAndShowConsentModal(); // Проверяем согласие ПЕРЕД initApp
+        initApp();
+    });
 } else {
+    checkAndShowConsentModal(); // Проверяем согласие ПЕРЕД initApp
     initApp();
 }

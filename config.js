@@ -35,6 +35,17 @@ const CONFIG = {
         ENABLED: true
     },
 
+    // [T-008] User Consents - Политика конфиденциальности и ПД
+    CONSENTS: {
+        /** Make.com webhook для логирования согласий */
+        WEBHOOK_URL: 'https://hook.eu2.make.com/emmnhod6j0c9cc7tjqsj8x2aota4lbj2',
+        /** Версия политики (для версионирования) */
+        POLICY_VERSION: '1.0',
+        /** Ссылки на документы */
+        PRIVACY_POLICY_URL: 'https://arinaprovodnik.com/politica',
+        PERSONAL_DATA_URL: 'https://arinaprovodnik.com/person'
+    },
+
     // [T-003] YooKassa payment integration
     YOOKASSA: {
         // Используем существующий main webhook для создания платежей

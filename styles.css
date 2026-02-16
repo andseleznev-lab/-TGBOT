@@ -1291,3 +1291,62 @@ body {
     100% { transform: rotate(360deg); }
 }
 }
+
+/* ===== [T-008] МОДАЛКА СОГЛАСИЯ НА ПОЛИТИКУ КОНФИДЕНЦИАЛЬНОСТИ ===== */
+.consent-modal {
+    max-width: 400px;
+    width: 90%;
+    padding: 28px 24px;
+    text-align: center;
+    animation: fadeInScale 0.3s ease-out;
+}
+
+.consent-modal h2 {
+    font-size: 24px;
+    font-weight: 600;
+    color: #2C2C2C;
+    margin: 0 0 12px 0;
+}
+
+.consent-text {
+    font-size: 15px;
+    color: #666;
+    margin: 0 0 20px 0;
+    line-height: 1.5;
+}
+
+.consent-links {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.consent-link {
+    color: #C8B8A0; /* Beige */
+    font-size: 15px;
+    font-weight: 500;
+    text-decoration: none;
+    padding: 8px;
+    border-radius: 8px;
+    transition: background 0.2s;
+}
+
+.consent-link:hover {
+    background: rgba(200, 184, 160, 0.1);
+}
+
+.consent-link:active {
+    background: rgba(200, 184, 160, 0.2);
+}
+
+@keyframes fadeInScale {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
