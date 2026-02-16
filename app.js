@@ -1490,6 +1490,12 @@ function showConsentModal() {
 
     overlay.style.display = 'flex'; // Показать модалку
 
+    // [T-008] Скрываем debug-controls (чтобы модалка была поверх всего)
+    const debugControls = document.getElementById('debug-controls');
+    if (debugControls) {
+        debugControls.style.display = 'none';
+    }
+
     // Haptic feedback (уведомление)
     tg.HapticFeedback.notificationOccurred('warning');
 
@@ -1539,6 +1545,12 @@ async function handleConsentAgree() {
         // Закрываем модалку
         const overlay = document.getElementById('consent-modal-overlay');
         if (overlay) overlay.style.display = 'none';
+
+        // [T-008] Возвращаем debug-controls обратно
+        const debugControls = document.getElementById('debug-controls');
+        if (debugControls) {
+            debugControls.style.display = 'flex';
+        }
 
         hideLoadingModal();
 
