@@ -1460,6 +1460,16 @@ function hideLoadingModal() {
 }
 
 /**
+ * [T-008] Возвращает текущее московское время в ISO формате (UTC+3)
+ * @returns {string} ISO timestamp с timezone +03:00 (например: "2026-02-16T20:40:00.123+03:00")
+ */
+function getMoscowTimestamp() {
+    const now = new Date(); // UTC время
+    const moscowTime = new Date(now.getTime() + (3 * 60 * 60 * 1000)); // +3 часа (MSK = UTC+3)
+    return moscowTime.toISOString().replace('Z', '+03:00'); // Заменяем Z на +03:00
+}
+
+/**
  * [T-008] Логирует согласие пользователя в Supabase через Make.com webhook
  * @param {number} userId - Telegram user ID
  * @param {string} username - Telegram username или first_name
@@ -1480,7 +1490,8 @@ async function logConsent(userId, username, consentType) {
         consent_type: consentType,
         consent_given: true,
         policy_version: CONFIG.CONSENTS.POLICY_VERSION,
-        user_agent: navigator.userAgent // Для юридической защиты (опционально)
+        user_agent: navigator.userAgent, // Для юридической защиты (опционально)
+        created_at: getMoscowTimestamp() // Московское время (UTC+3)
     };
 
     const response = await fetch(webhookUrl, {
