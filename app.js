@@ -462,6 +462,12 @@ function showPaymentConfirmModal(paymentData) {
                             <div class="payment-amount-label">Сумма к оплате</div>
                             <div class="payment-amount-value">${formattedPrice} ₽</div>
                         </div>
+
+                        <!-- [T-008] Текст договора оферты -->
+                        <p class="offer-text">
+                            Оплачивая услугу, вы соглашаетесь с
+                            <a href="https://arinaprovodnik.com/oferta" target="_blank" class="offer-link">Договором оферты</a>
+                        </p>
                     </div>
                     <div class="payment-modal-footer">
                         <button class="payment-modal-button payment-modal-button-primary" id="paymentConfirmBtn">
@@ -494,12 +500,24 @@ function showPaymentConfirmModal(paymentData) {
         };
 
         // Обработчик кнопки "Оплатить"
-        confirmBtn.addEventListener('click', () => {
+        confirmBtn.addEventListener('click', async () => {
             console.log('✅ [showPaymentConfirmModal] Нажата кнопка "Оплатить"');
 
             // Haptic feedback
             if (tg.HapticFeedback) {
                 tg.HapticFeedback.notificationOccurred('success');
+            }
+
+            // [T-008] Логируем согласие с офертой для платных услуг
+            try {
+                const userId = tg.initDataUnsafe?.user?.id;
+                const username = tg.initDataUnsafe?.user?.username ||
+                                 tg.initDataUnsafe?.user?.first_name ||
+                                 'Unknown';
+                await logConsent(userId, username, 'offer_contract_booking');
+            } catch (error) {
+                console.error('[T-008] Failed to log offer consent for booking:', error);
+                // Не показываем ошибку пользователю (не критично)
             }
 
             // Закрываем модалку

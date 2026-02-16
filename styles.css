@@ -1046,6 +1046,25 @@ body {
     background: var(--glass-bg-hover);
 }
 
+/* [T-008] Текст договора оферты */
+.offer-text {
+    font-size: 12px;
+    color: #999;
+    margin-top: 16px;
+    text-align: center;
+    line-height: 1.4;
+}
+
+.offer-link {
+    color: #C8B8A0;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.offer-link:hover {
+    color: #B8A890;
+}
+
 /* ===== LOADING MODAL (T-003) ===== */
 .loading-modal-overlay {
     position: fixed;
