@@ -1349,16 +1349,17 @@ body {
 }
 
 .consent-link {
-    color: #C8B8A0; /* Beige */
+    color: #2C2C2C; /* Тёмный цвет как заголовок */
     font-size: 15px;
     font-weight: 500;
-    text-decoration: none;
+    text-decoration: underline; /* Подчёркивание */
     padding: 8px;
     border-radius: 8px;
-    transition: background 0.2s;
+    transition: all 0.2s;
 }
 
 .consent-link:hover {
+    color: #4A4238; /* Чуть светлее при hover */
     background: rgba(200, 184, 160, 0.1);
 }
 
@@ -1370,26 +1371,25 @@ body {
 .consent-btn {
     width: 100%;
     padding: 16px;
-    background: #C8B8A0; /* Бежевый */
-    color: #2C2C2C; /* Тёмный текст */
+    background: var(--accent-gradient); /* Градиент как у "Записаться" */
+    color: var(--text-white);
     border: none;
     border-radius: 12px;
     font-size: 16px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
-    box-shadow: 0 2px 8px rgba(200, 184, 160, 0.3);
+    box-shadow: 0 4px 12px rgba(212, 165, 116, 0.3);
 }
 
 .consent-btn:hover {
-    background: #B8A890; /* Темнее при hover */
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(200, 184, 160, 0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(212, 165, 116, 0.4);
 }
 
 .consent-btn:active {
     transform: translateY(0);
-    box-shadow: 0 2px 6px rgba(200, 184, 160, 0.3);
+    box-shadow: 0 2px 8px rgba(212, 165, 116, 0.2);
 }
 
 @keyframes fadeInScale {
