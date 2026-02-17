@@ -1694,7 +1694,7 @@ function renderServicesScreen() {
     const services = State.services.filter(s => s.id !== 'club_info');
 
     const html = `
-        <h1 class="screen-title fade-in">Диагностика - это первый шаг перед консультацией</h1>
+        <h1 class="screen-title screen-title--diagnostic fade-in">Диагностика - это первый шаг перед консультацией</h1>
         <div class="services-grid fade-in">
             ${services.map(service => `
                 <div class="service-card glass-card" onclick="selectService('${escapeHtml(service.id)}')">
