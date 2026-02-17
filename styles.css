@@ -89,11 +89,37 @@ body {
 
 /* ===== ЗАГОЛОВКИ ===== */
 .screen-title {
+    position: relative;
     font-size: 32px;
     font-weight: 700;
     color: var(--text-primary);
     margin-bottom: 24px;
     letter-spacing: -0.5px;
+    padding: 16px 0;
+}
+
+/* [T-009] Угловая рамка - верхний левый угол */
+.screen-title::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 50px;
+    height: 50px;
+    border-top: 2.5px solid #C8B8A0;
+    border-left: 2.5px solid #C8B8A0;
+}
+
+/* [T-009] Угловая рамка - нижний правый угол */
+.screen-title::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 50px;
+    height: 50px;
+    border-bottom: 2.5px solid #C8B8A0;
+    border-right: 2.5px solid #C8B8A0;
 }
 
 .section-title {
@@ -788,8 +814,8 @@ body {
 
 .tab-btn.active {
     color: var(--accent-primary);
-    background: white;
-    border: 1px solid rgba(200, 184, 160, 0.4);
+    background: transparent;
+    border: 1.5px solid #C8B8A0;
     box-sizing: border-box;
 }
 
