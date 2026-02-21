@@ -17,7 +17,7 @@
             top: 10px;
             right: 10px;
             z-index: 9999;
-            display: none;
+            display: flex;
             gap: 8px;
         }
 
@@ -389,14 +389,12 @@ Telegram User ID: ${window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 'unknow
         console.log('📋 Для копирования нажмите кнопку "📋 Копировать"');
     </script>
 
-    <!-- 🔧 ERUDA DevTools (временно отключено) -->
-    <!--
+    <!-- 🔧 ERUDA DevTools -->
     <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
     <script>
         eruda.init();
         console.log('🔧 Eruda DevTools initialized');
     </script>
-    -->
 
     <!-- Supabase SDK для PostgreSQL + Realtime (T-006) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
