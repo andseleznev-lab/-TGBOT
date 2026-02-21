@@ -1,13 +1,6 @@
 {
-  "generated_at": "2026-02-21T17:06:35.000Z",
+  "generated_at": "2026-02-21T17:12:35.000Z",
   "slots": [
-	{
-		"id": "pslot_139",
-		"date": "24.02.2026",
-		"time": "10:00",
-		"status": "free",
-		"service": "package"
-	},
 	{
 		"id": "pslot_140",
 		"date": "24.02.2026",
@@ -163,6 +156,41 @@
 		"service": "diagnosis"
 	},
 	{
+		"id": "pslot_162",
+		"date": "26.02.2026",
+		"time": "10:00",
+		"status": "free",
+		"service": "package"
+	},
+	{
+		"id": "pslot_163",
+		"date": "26.02.2026",
+		"time": "12:00",
+		"status": "free",
+		"service": "package"
+	},
+	{
+		"id": "pslot_164",
+		"date": "26.02.2026",
+		"time": "14:00",
+		"status": "free",
+		"service": "package"
+	},
+	{
+		"id": "pslot_165",
+		"date": "26.02.2026",
+		"time": "16:00",
+		"status": "free",
+		"service": "package"
+	},
+	{
+		"id": "pslot_166",
+		"date": "26.02.2026",
+		"time": "18:00",
+		"status": "free",
+		"service": "package"
+	},
+	{
 		"id": "fslot_167",
 		"date": "26.02.2026",
 		"time": "10:00",
@@ -191,6 +219,13 @@
 		"service": "family"
 	},
 	{
+		"id": "fslot_171",
+		"date": "26.02.2026",
+		"time": "18:00",
+		"status": "free",
+		"service": "family"
+	},
+	{
 		"id": "sslot_172",
 		"date": "26.02.2026",
 		"time": "10:00",
@@ -215,6 +250,13 @@
 		"id": "sslot_175",
 		"date": "26.02.2026",
 		"time": "16:00",
+		"status": "free",
+		"service": "single"
+	},
+	{
+		"id": "sslot_176",
+		"date": "26.02.2026",
+		"time": "18:00",
 		"status": "free",
 		"service": "single"
 	},
