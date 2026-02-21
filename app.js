@@ -928,7 +928,7 @@ class BookingAPI {
      * @returns {Promise<Object>} результат от Make.com
      */
     static async request(action, data = {}, options = {}) {
-        const { showError = true } = options;
+        const { showError = true, url = CONFIG.API.main } = options;
         const startTime = Date.now();
 
         // Проверка активности приложения
@@ -949,7 +949,7 @@ class BookingAPI {
         try {
             // Используем fetchWithErrorHandling для обработки ошибок
             const response = await fetchWithErrorHandling(
-                CONFIG.API.main,
+                url,
                 {
                     method: 'POST',
                     headers: {
@@ -2243,7 +2243,7 @@ async function confirmBooking() {
                 date: State.selectedDate,
                 time: State.selectedSlot,
                 slot_id: slot.id
-            });
+            }, { url: CONFIG.API.packageSession });
 
             hideLoadingModal();
 
