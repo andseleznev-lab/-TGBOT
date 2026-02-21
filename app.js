@@ -2238,12 +2238,11 @@ async function confirmBooking() {
             console.log(`📦 [confirmBooking] package_session: слот ${slot.id}, осталось ${State.userPackage.sessions_remaining} сессий`);
             showLoadingModal('Создание встречи...');
 
-            const result = await BookingAPI.request('book_slot', {
+            const result = await BookingAPI.request('book_package_session', {
                 service_name: State.selectedService,
                 date: State.selectedDate,
                 time: State.selectedSlot,
-                slot_id: slot.id,
-                payment_type: 'package_session'
+                slot_id: slot.id
             });
 
             hideLoadingModal();
