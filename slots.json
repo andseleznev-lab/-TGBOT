@@ -1,12 +1,103 @@
 {
-  "generated_at": "2026-02-21T15:49:50.000Z",
+  "generated_at": "2026-02-21T15:59:05.000Z",
   "slots": [
+	{
+		"id": "pslot_139",
+		"date": "24.02.2026",
+		"time": "10:00",
+		"status": "free",
+		"service": "package"
+	},
+	{
+		"id": "pslot_140",
+		"date": "24.02.2026",
+		"time": "12:00",
+		"status": "free",
+		"service": "package"
+	},
+	{
+		"id": "pslot_141",
+		"date": "24.02.2026",
+		"time": "14:00",
+		"status": "free",
+		"service": "package"
+	},
+	{
+		"id": "pslot_142",
+		"date": "24.02.2026",
+		"time": "16:00",
+		"status": "free",
+		"service": "package"
+	},
+	{
+		"id": "pslot_143",
+		"date": "24.02.2026",
+		"time": "18:00",
+		"status": "free",
+		"service": "package"
+	},
+	{
+		"id": "fslot_144",
+		"date": "24.02.2026",
+		"time": "10:00",
+		"status": "free",
+		"service": "family"
+	},
+	{
+		"id": "fslot_145",
+		"date": "24.02.2026",
+		"time": "12:00",
+		"status": "free",
+		"service": "family"
+	},
+	{
+		"id": "fslot_146",
+		"date": "24.02.2026",
+		"time": "14:00",
+		"status": "free",
+		"service": "family"
+	},
+	{
+		"id": "fslot_147",
+		"date": "24.02.2026",
+		"time": "16:00",
+		"status": "free",
+		"service": "family"
+	},
 	{
 		"id": "fslot_148",
 		"date": "24.02.2026",
 		"time": "18:00",
 		"status": "free",
 		"service": "family"
+	},
+	{
+		"id": "sslot_149",
+		"date": "24.02.2026",
+		"time": "10:00",
+		"status": "free",
+		"service": "single"
+	},
+	{
+		"id": "sslot_150",
+		"date": "24.02.2026",
+		"time": "12:00",
+		"status": "free",
+		"service": "single"
+	},
+	{
+		"id": "sslot_151",
+		"date": "24.02.2026",
+		"time": "14:00",
+		"status": "free",
+		"service": "single"
+	},
+	{
+		"id": "sslot_152",
+		"date": "24.02.2026",
+		"time": "16:00",
+		"status": "free",
+		"service": "single"
 	},
 	{
 		"id": "sslot_153",
@@ -70,13 +161,6 @@
 		"time": "17:00",
 		"status": "free",
 		"service": "diagnosis"
-	},
-	{
-		"id": "pslot_162",
-		"date": "26.02.2026",
-		"time": "10:00",
-		"status": "free",
-		"service": "package"
 	},
 	{
 		"id": "pslot_163",
