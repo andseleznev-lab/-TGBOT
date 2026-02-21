@@ -241,6 +241,42 @@ function updateClubUIAfterPayment(payment) {
     }
 }
 
+// ===== [T-010] PACKAGE CONSULTATIONS =====
+
+/**
+ * [T-010] Проверяет наличие активного пакета консультаций у пользователя
+ * Запрашивает user_packages WHERE telegram_user_id = USER.id AND status = 'active'
+ * @returns {Promise<Object|null>} Данные пакета или null если нет активного пакета
+ */
+async function checkUserPackage() {
+    try {
+        if (!CONFIG.SUPABASE.ENABLED || !supabaseClient) {
+            console.log('⚠️ [checkUserPackage] Supabase отключён, пропускаем проверку пакета');
+            return null;
+        }
+
+        const { data, error } = await supabaseClient
+            .from('user_packages')
+            .select('*')
+            .eq('telegram_user_id', USER.id)
+            .eq('status', 'active')
+            .single();
+
+        if (error || !data) {
+            console.log('[checkUserPackage] Нет активного пакета');
+            return null;
+        }
+
+        State.userPackage = data;
+        console.log(`✅ [checkUserPackage] Активный пакет найден: ${data.sessions_remaining} из ${data.sessions_total} сессий`);
+        return data;
+
+    } catch (err) {
+        console.error('❌ [checkUserPackage] Ошибка:', err);
+        return null;
+    }
+}
+
 // ===== [T-003] YOOKASSA PAYMENT FUNCTIONS =====
 
 /**
@@ -661,7 +697,8 @@ const State = {
     clubPayments: [],  // [T-005] Массив платежей клуба для текущего пользователя
     isLoadingClub: false,  // [T-005] Флаг загрузки данных клуба
     clubZoomLink: '',  // [T-005] Ссылка на Zoom-встречу клуба
-    clubPaymentProcessing: localStorage.getItem('clubPaymentProcessing') === 'true'  // [UX] Флаг создания встреч после оплаты (сохраняется между сессиями)
+    clubPaymentProcessing: localStorage.getItem('clubPaymentProcessing') === 'true',  // [UX] Флаг создания встреч после оплаты (сохраняется между сессиями)
+    userPackage: null  // [T-010] Данные активного пакета консультаций {sessions_remaining, sessions_total, ...}
 };
 
 // 🔧 ИСПРАВЛЕНИЕ 2: Обработка visibility change для корректной работы при выходе/входе
@@ -1703,14 +1740,17 @@ function renderServicesScreen() {
                         <div class="service-info">
                             <div class="service-name">${escapeHtml(service.name)}</div>
                             <div class="service-duration">${service.duration}</div>
+                            ${service.id === 'package' && State.userPackage ? `
+                                <div class="package-sessions-badge">Осталось ${State.userPackage.sessions_remaining} из ${State.userPackage.sessions_total} сессий</div>
+                            ` : ''}
                         </div>
                     </div>
                     <div class="service-description">
                         ${getServiceDescription(service.name)}
                     </div>
                     <div class="service-footer">
-                        <div class="service-price ${service.price === 0 ? 'free' : ''}">
-                            ${service.price === 0 ? 'Бесплатно' : formatPrice(service.price)}
+                        <div class="service-price ${service.id === 'package' && State.userPackage ? 'active' : service.price === 0 ? 'free' : ''}">
+                            ${service.id === 'package' && State.userPackage ? 'Пакет активен' : service.price === 0 ? 'Бесплатно' : formatPrice(service.price)}
                         </div>
                         <button class="service-btn">
                             Записаться →
@@ -2181,6 +2221,66 @@ async function confirmBooking() {
     if (State.isBooking) {
         console.log('⚠️ [confirmBooking] Запрос уже выполняется, игнорируем повторный клик');
         tg.HapticFeedback.notificationOccurred('warning');
+        return;
+    }
+
+    // [T-010] Для пакета с активными сессиями — бронирование без оплаты
+    if (State.selectedService === 'package' && State.userPackage && State.userPackage.sessions_remaining > 0) {
+        State.isBooking = true;
+        try {
+            const slot = State.availableSlots.find(s => s.time === State.selectedSlot);
+            if (!slot || !slot.id) {
+                console.error('❌ [confirmBooking] package_session: слот не найден:', State.selectedSlot);
+                tg.showAlert('Слот не найден. Попробуйте выбрать другое время.');
+                return;
+            }
+
+            console.log(`📦 [confirmBooking] package_session: слот ${slot.id}, осталось ${State.userPackage.sessions_remaining} сессий`);
+            showLoadingModal('Создание встречи...');
+
+            const result = await BookingAPI.request('book_slot', {
+                service_name: State.selectedService,
+                date: State.selectedDate,
+                time: State.selectedSlot,
+                slot_id: slot.id,
+                payment_type: 'package_session'
+            });
+
+            hideLoadingModal();
+
+            if (result.success) {
+                tg.HapticFeedback.notificationOccurred('success');
+
+                // Обновляем счётчик локально (Make.com может вернуть актуальное значение)
+                const remaining = result.sessions_remaining !== undefined
+                    ? result.sessions_remaining
+                    : State.userPackage.sessions_remaining - 1;
+                State.userPackage.sessions_remaining = remaining;
+
+                CacheManager.clear(`bookings_${USER.id}`);
+                CacheManager.clear('slots_json');
+                CacheManager.clearPattern('dates_');
+                CacheManager.clearPattern('slots_');
+
+                State.selectedService = null;
+                State.selectedDate = null;
+                State.selectedSlot = null;
+                State.selectedSlotId = null;
+                State.availableDates = [];
+                State.availableSlots = [];
+
+                showSuccessPopup('Встреча забронирована', `Осталось ${remaining} из ${State.userPackage.sessions_total} сессий`);
+                switchTab('mybookings');
+            }
+        } catch (error) {
+            hideLoadingModal();
+            console.error('❌ [confirmBooking] Ошибка бронирования пакета:', error);
+            tg.HapticFeedback.notificationOccurred('error');
+            const message = error.apiResponse?.message || error.message || 'Не удалось создать запись. Попробуйте позже.';
+            showSlotTakenPopup(message);
+        } finally {
+            State.isBooking = false;
+        }
         return;
     }
 
@@ -4161,6 +4261,7 @@ async function initApp() {
     }
     
     await loadServices();
+    await checkUserPackage();  // [T-010] Проверяем пакет до первого рендера
     renderServicesScreen();
 
     // 🔧 Обработка автоматического перехода на вкладку "Клуб" (для YooKassa return_url)

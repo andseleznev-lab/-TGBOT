@@ -220,6 +220,29 @@ body {
     color: var(--text-secondary);
 }
 
+/* [T-010] Бейджик активного пакета консультаций */
+.package-sessions-badge {
+    display: inline-block;
+    margin-top: 6px;
+    padding: 3px 10px;
+    background: var(--success-light);
+    color: #5a7a3a;
+    border: 1px solid rgba(168, 198, 134, 0.4);
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+/* [T-010] Цена "Пакет активен" */
+.service-price.active {
+    color: #5a7a3a;
+    -webkit-text-fill-color: #5a7a3a;
+    background: none;
+    -webkit-background-clip: unset;
+    background-clip: unset;
+    font-size: 18px;
+}
+
 .service-description {
     font-size: 15px;
     color: var(--text-secondary);
