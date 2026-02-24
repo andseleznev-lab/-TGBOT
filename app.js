@@ -2481,7 +2481,7 @@ async function fetchSlotsFromGitAPI(cacheKey, cacheTTL, isBackground = false) {
             headers: {
                 'Accept': 'application/json'
             },
-            signal: AbortSignal.timeout(5000) // 5 секунд timeout
+            signal: AbortSignal.timeout(15000) // 15 секунд timeout (GitHub CDN может отвечать >5s)
         });
 
         if (!response.ok) {
@@ -3433,7 +3433,7 @@ async function loadClubData(forceRefresh = false) {
             headers: {
                 'Accept': 'application/json'
             },
-            signal: AbortSignal.timeout(5000) // 5 секунд timeout
+            signal: AbortSignal.timeout(15000) // 15 секунд timeout (GitHub CDN может отвечать >5s)
         });
 
         if (!response.ok) {
@@ -4007,7 +4007,7 @@ function startBackgroundPolling() {
             const response = await fetch(CONFIG.CLUB_JSON_URL + '?t=' + Date.now(), {
                 method: 'GET',
                 headers: { 'Accept': 'application/json' },
-                signal: AbortSignal.timeout(5000)
+                signal: AbortSignal.timeout(15000)
             });
 
             if (!response.ok) {
@@ -4085,7 +4085,7 @@ function startClubPaymentPolling() {
             const response = await fetch(CONFIG.CLUB_JSON_URL + '?t=' + Date.now(), {
                 method: 'GET',
                 headers: { 'Accept': 'application/json' },
-                signal: AbortSignal.timeout(5000)
+                signal: AbortSignal.timeout(15000)
             });
 
             if (!response.ok) {
