@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-02-24T14:59:58.000Z",
+  "generated_at": "2026-02-24T15:05:09.000Z",
   "slots": [
 	{
 		"id": "pslot_141",
@@ -142,13 +142,6 @@
 		"service": "package"
 	},
 	{
-		"id": "pslot_164",
-		"date": "26.02.2026",
-		"time": "14:00",
-		"status": "free",
-		"service": "package"
-	},
-	{
 		"id": "pslot_165",
 		"date": "26.02.2026",
 		"time": "16:00",
@@ -208,13 +201,6 @@
 		"id": "sslot_173",
 		"date": "26.02.2026",
 		"time": "12:00",
-		"status": "free",
-		"service": "single"
-	},
-	{
-		"id": "sslot_174",
-		"date": "26.02.2026",
-		"time": "14:00",
 		"status": "free",
 		"service": "single"
 	},
