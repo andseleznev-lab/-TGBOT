@@ -846,7 +846,8 @@ const CacheManager = {
 
             return {
                 data: cacheData.data,
-                isExpired: isExpired
+                isExpired: isExpired,
+                age: age
             };
         } catch (error) {
             console.error(`❌ [Cache] Ошибка чтения ${key}:`, error);
