@@ -1,6 +1,13 @@
 {
-  "generated_at": "2026-02-24T15:45:16.000Z",
+  "generated_at": "2026-02-24T15:46:59.000Z",
   "slots": [
+	{
+		"id": "pslot_140",
+		"date": "24.02.2026",
+		"time": "12:00",
+		"status": "free",
+		"service": "package"
+	},
 	{
 		"id": "pslot_141",
 		"date": "24.02.2026",
@@ -21,6 +28,20 @@
 		"time": "18:00",
 		"status": "free",
 		"service": "package"
+	},
+	{
+		"id": "fslot_144",
+		"date": "24.02.2026",
+		"time": "10:00",
+		"status": "free",
+		"service": "family"
+	},
+	{
+		"id": "fslot_145",
+		"date": "24.02.2026",
+		"time": "12:00",
+		"status": "free",
+		"service": "family"
 	},
 	{
 		"id": "fslot_146",
@@ -44,9 +65,9 @@
 		"service": "family"
 	},
 	{
-		"id": "sslot_149",
+		"id": "sslot_150",
 		"date": "24.02.2026",
-		"time": "10:00",
+		"time": "12:00",
 		"status": "free",
 		"service": "single"
 	},
@@ -142,6 +163,13 @@
 		"service": "package"
 	},
 	{
+		"id": "pslot_164",
+		"date": "26.02.2026",
+		"time": "14:00",
+		"status": "free",
+		"service": "package"
+	},
+	{
 		"id": "pslot_165",
 		"date": "26.02.2026",
 		"time": "16:00",
@@ -170,6 +198,13 @@
 		"service": "family"
 	},
 	{
+		"id": "fslot_169",
+		"date": "26.02.2026",
+		"time": "14:00",
+		"status": "free",
+		"service": "family"
+	},
+	{
 		"id": "fslot_170",
 		"date": "26.02.2026",
 		"time": "16:00",
@@ -194,6 +229,13 @@
 		"id": "sslot_173",
 		"date": "26.02.2026",
 		"time": "12:00",
+		"status": "free",
+		"service": "single"
+	},
+	{
+		"id": "sslot_174",
+		"date": "26.02.2026",
+		"time": "14:00",
 		"status": "free",
 		"service": "single"
 	},
@@ -268,6 +310,13 @@
 		"service": "diagnosis"
 	},
 	{
+		"id": "pslot_185",
+		"date": "03.03.2026",
+		"time": "10:00",
+		"status": "free",
+		"service": "package"
+	},
+	{
 		"id": "pslot_186",
 		"date": "03.03.2026",
 		"time": "12:00",
@@ -296,6 +345,13 @@
 		"service": "package"
 	},
 	{
+		"id": "fslot_190",
+		"date": "03.03.2026",
+		"time": "10:00",
+		"status": "free",
+		"service": "family"
+	},
+	{
 		"id": "fslot_191",
 		"date": "03.03.2026",
 		"time": "12:00",
@@ -322,6 +378,13 @@
 		"time": "18:00",
 		"status": "free",
 		"service": "family"
+	},
+	{
+		"id": "sslot_195",
+		"date": "03.03.2026",
+		"time": "10:00",
+		"status": "free",
+		"service": "single"
 	},
 	{
 		"id": "sslot_196",
