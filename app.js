@@ -393,6 +393,14 @@ async function createPayment(slotId, serviceId) {
 
         console.log('✅ [createPayment] Платёж создан, URL получен');
 
+        // Сохраняем payment_url для повторной оплаты (если пользователь уйдёт из YooKassa и вернётся)
+        try {
+            localStorage.setItem(`pending_payment_${slotId}`, JSON.stringify({
+                payment_url: result.payment_url,
+                payment_id: result.payment_id || null
+            }));
+        } catch { /* ignore */ }
+
         // Возвращаем полный результат (для модального окна)
         return result;
 
@@ -624,6 +632,31 @@ async function handlePaymentFromBooking(bookingId, serviceId, dateOverride = nul
 
     try {
         console.log(`💳 [handlePaymentFromBooking] Начало оплаты для слота ${bookingId}`);
+
+        // Проверяем сохранённый payment_url (повторная оплата locking-слота без Make.com)
+        try {
+            const storedRaw = localStorage.getItem(`pending_payment_${bookingId}`);
+            if (storedRaw) {
+                const stored = JSON.parse(storedRaw);
+                if (stored.payment_url) {
+                    console.log(`🔄 [handlePaymentFromBooking] Найден сохранённый payment_url для ${bookingId} - открываем без Make.com`);
+                    const booking = State.userBookings.find(b => b.id === bookingId);
+                    const date = dateOverride || (booking ? booking.date : null);
+                    const time = timeOverride || (booking ? booking.time : null);
+                    if (date && time) {
+                        showPaymentConfirmModal({
+                            payment_url: stored.payment_url,
+                            payment_id: stored.payment_id,
+                            service: serviceId,
+                            date: date,
+                            time: time,
+                            price: CONFIG.SERVICE_PRICES[serviceId] || 0
+                        });
+                        return;
+                    }
+                }
+            }
+        } catch (_e) { /* ignore parse errors */ }
 
         // Показываем loading modal
         showLoadingModal('Создание платежа...');
@@ -3006,6 +3039,9 @@ async function cancelBooking(slotId) {
                 CacheManager.clear('slots_json');
                 CacheManager.clearPattern('dates_');
                 CacheManager.clearPattern('slots_');
+
+                // Чистим сохранённый payment_url (слот освобождён, URL больше не нужен)
+                localStorage.removeItem(`pending_payment_${slotId}`);
 
                 // Обновляем список бронирований
                 await loadUserBookings();
