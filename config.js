@@ -5,7 +5,7 @@ const CONFIG = {
     API: {
         main: 'https://hook.eu2.make.com/r61db3c6xvtw765yx3hy8629561k23ba',
         packageSession: 'https://hook.eu2.make.com/fsonmvav7haazm09cmvs38pbpu5nze96', // [T-010] Отдельный вебхук для бронирования из пакета
-        timeout: 10000  // 10 секунд timeout для всех API запросов
+        timeout: 30000  // 30 секунд timeout для всех API запросов (Make.com может отвечать ~14s)
     },
 
     // [T-002] URL для slots.json из Git (статический файл)
