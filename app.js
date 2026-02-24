@@ -1774,7 +1774,7 @@ function renderServicesScreen() {
                         <div class="service-info">
                             <div class="service-name">${escapeHtml(service.name)}</div>
                             <div class="service-duration">${service.duration}</div>
-                            ${service.id === 'package' && State.userPackage ? `
+                            ${service.id === 'package' && State.userPackage && State.userPackage.sessions_remaining > 0 ? `
                                 <div class="package-sessions-badge">Осталось ${State.userPackage.sessions_remaining} из ${State.userPackage.sessions_total} сессий</div>
                             ` : ''}
                         </div>
@@ -3112,6 +3112,13 @@ function switchTab(tabName) {
     switch(tabName) {
         case 'services':
             renderServicesScreen();
+            // [T-010] Обновляем данные пакета в фоне (аналогично club-табу)
+            checkUserPackage()
+                .then(() => {
+                    if (State.currentTab === 'services') {
+                        renderServicesScreen();
+                    }
+                });
             break;
         case 'booking':
             renderBookingScreen();

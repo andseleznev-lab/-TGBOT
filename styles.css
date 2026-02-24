@@ -226,7 +226,7 @@ body {
     margin-top: 6px;
     padding: 3px 10px;
     background: var(--success-light);
-    color: #5a7a3a;
+    color: var(--success);
     border: 1px solid rgba(168, 198, 134, 0.4);
     border-radius: 20px;
     font-size: 12px;
