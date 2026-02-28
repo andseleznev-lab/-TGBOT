@@ -1950,7 +1950,7 @@ function renderMyBookingsScreen() {
     const completedBookings = bookings.filter(b => b.status !== 'locking');
 
     const html = `
-        <h1 class="screen-title fade-in">Мои записи</h1>
+        <h1 class="screen-title screen-title--diagnostic fade-in">Мои записи</h1>
 
         ${lockingBookings.length > 0 ? `
             <div class="fade-in" style="margin-bottom: 24px;">
@@ -2137,6 +2137,21 @@ async function onServiceSelect(serviceId) {
         showLoader();
         await loadAvailableDates(serviceId);
         hideLoader();
+
+        // [T-011] Автопереключение: если в текущем месяце нет слотов — идём на первый доступный
+        if (State.availableDates.length > 0) {
+            const y = State.currentMonth.getFullYear();
+            const m = State.currentMonth.getMonth();
+            const hasCurrentMonthSlots = State.availableDates.some(d => {
+                const [, dm, dy] = d.date.split('.');
+                return parseInt(dy) === y && parseInt(dm) - 1 === m;
+            });
+            if (!hasCurrentMonthSlots) {
+                const [, fm, fy] = State.availableDates[0].date.split('.');
+                State.currentMonth = new Date(parseInt(fy), parseInt(fm) - 1, 1);
+            }
+        }
+
         renderBookingScreen();
     } catch (error) {
         hideLoader();
@@ -3151,7 +3166,7 @@ function switchTab(tabName) {
         case 'mybookings':
             // Показываем loader сразу
             document.getElementById('app').innerHTML = `
-                <h1 class="screen-title fade-in">Мои записи</h1>
+                <h1 class="screen-title screen-title--diagnostic fade-in">Мои записи</h1>
                 <div class="loader-container">
                     <div class="glass-loader"></div>
                     <p>Загрузка...</p>
@@ -3571,7 +3586,7 @@ function renderClubScreen() {
         // 1. Показываем loader при загрузке
         if (State.isLoadingClub) {
             container.innerHTML = `
-                <h1 class="screen-title fade-in">Встречи клуба - каждое воскресенье в ${CONFIG.CLUB.MEETING_TIME}</h1>
+                <h1 class="screen-title screen-title--diagnostic fade-in">Встречи клуба - каждое воскресенье в ${CONFIG.CLUB.MEETING_TIME}</h1>
                 <div class="services-grid fade-in">
                     <div class="service-card glass-card" style="text-align: center; padding: 40px 20px;">
                         <div class="dates-spinner"></div>
@@ -3591,7 +3606,7 @@ function renderClubScreen() {
             const pendingPayment = pendingPayments[0]; // Берём первый pending
 
             container.innerHTML = `
-                <h1 class="screen-title fade-in">Встречи клуба - каждое воскресенье в ${CONFIG.CLUB.MEETING_TIME}</h1>
+                <h1 class="screen-title screen-title--diagnostic fade-in">Встречи клуба - каждое воскресенье в ${CONFIG.CLUB.MEETING_TIME}</h1>
                 <div class="services-grid fade-in">
                     <div class="service-card glass-card">
                         <div class="service-header">
@@ -3620,7 +3635,7 @@ function renderClubScreen() {
             // 4a. Если оплата в процессе (GitHub deployment delay) - показываем лоадер
             if (State.clubPaymentProcessing) {
                 container.innerHTML = `
-                    <h1 class="screen-title fade-in">Встречи клуба - каждое воскресенье в ${CONFIG.CLUB.MEETING_TIME}</h1>
+                    <h1 class="screen-title screen-title--diagnostic fade-in">Встречи клуба - каждое воскресенье в ${CONFIG.CLUB.MEETING_TIME}</h1>
                     <div class="services-grid fade-in">
                         <div class="service-card glass-card">
                             <div class="service-header">
@@ -3643,7 +3658,7 @@ function renderClubScreen() {
 
             // 4b. Обычная карточка "Вступить в клуб"
             container.innerHTML = `
-                <h1 class="screen-title fade-in">Встречи клуба - каждое воскресенье в ${CONFIG.CLUB.MEETING_TIME}</h1>
+                <h1 class="screen-title screen-title--diagnostic fade-in">Встречи клуба - каждое воскресенье в ${CONFIG.CLUB.MEETING_TIME}</h1>
                 <div class="services-grid fade-in">
                     <div class="service-card glass-card">
                         <div class="service-header">
@@ -3717,7 +3732,7 @@ function renderClubScreen() {
         ` : '';
 
         container.innerHTML = `
-            <h1 class="screen-title fade-in">Встречи клуба - каждое воскресенье в ${CONFIG.CLUB.MEETING_TIME}</h1>
+            <h1 class="screen-title screen-title--diagnostic fade-in">Встречи клуба - каждое воскресенье в ${CONFIG.CLUB.MEETING_TIME}</h1>
             <div class="services-grid fade-in">
                 ${meetingCards}
                 ${renewButton}
@@ -3729,7 +3744,7 @@ function renderClubScreen() {
 
         // Fallback UI при ошибке
         document.getElementById('app').innerHTML = `
-            <h1 class="screen-title fade-in">Встречи клуба</h1>
+            <h1 class="screen-title screen-title--diagnostic fade-in">Встречи клуба</h1>
             <div class="services-grid fade-in">
                 <div class="service-card glass-card" style="text-align: center; padding: 40px 20px;">
                     <p style="color: var(--tg-theme-destructive-text-color, #ff3b30);">
