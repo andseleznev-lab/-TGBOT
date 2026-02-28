@@ -1980,10 +1980,10 @@ function renderMyBookingsScreen() {
                             </div>
                         </div>
                         ${booking.zoom_link ? `
-                            <div class="service-description">
-                                <a href="${escapeHtml(booking.zoom_link)}" class="zoom-link" target="_blank">
-                                    Ссылка на Zoom
-                                </a>
+                            <div class="service-footer">
+                                <button class="service-btn" onclick="openZoomLink('${escapeHtml(booking.zoom_link)}')">
+                                    Подключиться к Zoom →
+                                </button>
                             </div>
                         ` : ''}
                         <div class="service-footer">
