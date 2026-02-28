@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-02-28T17:43:19.000Z",
+  "generated_at": "2026-02-28T17:43:21.000Z",
   "slots": [
 	{
 		"id": "pslot_185",
@@ -194,13 +194,6 @@
 		"id": "fslot_215",
 		"date": "05.03.2026",
 		"time": "14:00",
-		"status": "free",
-		"service": "family"
-	},
-	{
-		"id": "fslot_216",
-		"date": "05.03.2026",
-		"time": "16:00",
 		"status": "free",
 		"service": "family"
 	},
