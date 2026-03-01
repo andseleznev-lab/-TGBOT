@@ -1884,7 +1884,7 @@ function renderBookingScreen() {
                         placeholder="example@mail.ru"
                         value="${escapeHtml(State.userEmail || '')}"
                         oninput="State.userEmail = this.value.trim()"
-                        onfocus="setTimeout(() => this.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)"
+                        onfocus="scrollToEmailInput(this)"
                         autocomplete="email"
                     />
                 </div>
@@ -2269,6 +2269,10 @@ function selectSlot(time) {
     }
 
     renderBookingScreen();
+
+    // [T-012] Скроллим к email-инпуту для платных услуг
+    const emailEl = document.querySelector('.email-input-section');
+    if (emailEl) setTimeout(() => emailEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
 
     // Сбрасываем флаг после завершения рендеринга
     setTimeout(() => {
@@ -3252,6 +3256,21 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+/**
+ * [T-012] Скроллит email-инпут в видимую область после открытия клавиатуры.
+ * visualViewport.resize срабатывает когда клавиатура уже открылась.
+ * @param {HTMLElement} el
+ */
+function scrollToEmailInput(el) {
+    const doScroll = () => el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    doScroll();
+    setTimeout(doScroll, 300);
+    setTimeout(doScroll, 600);
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', doScroll, { once: true });
+    }
 }
 
 function getServiceDescription(serviceName) {
