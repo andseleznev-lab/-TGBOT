@@ -2273,7 +2273,7 @@ function selectSlot(time) {
     // [T-012] Скроллим к кнопке «Подтвердить» — так email + кнопка видны внизу, слоты вверху
     setTimeout(() => {
         const confirmBtn = document.querySelector('.confirm-button');
-        if (confirmBtn) confirmBtn.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        if (confirmBtn) confirmBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 100);
 
     // Сбрасываем флаг после завершения рендеринга
