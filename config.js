@@ -79,7 +79,7 @@ const CONFIG = {
             name: 'Индивидуальная консультация',
             description: 'Персональная консультация',
             price: 8000,
-            duration: '1 час',
+            duration: null,
             days: ['Вторник', 'Четверг']
         },
         {
@@ -95,7 +95,7 @@ const CONFIG = {
             name: 'Семейная консультация',
             description: 'Консультация для пары или семьи',
             price: 10000,
-            duration: '2 часа',
+            duration: null,
             days: ['Вторник', 'Четверг']
         },
         {
