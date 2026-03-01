@@ -2270,9 +2270,11 @@ function selectSlot(time) {
 
     renderBookingScreen();
 
-    // [T-012] Скроллим к email-инпуту для платных услуг
-    const emailEl = document.querySelector('.email-input-section');
-    if (emailEl) setTimeout(() => emailEl.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+    // [T-012] Скроллим к кнопке «Подтвердить» — так email + кнопка видны внизу, слоты вверху
+    setTimeout(() => {
+        const confirmBtn = document.querySelector('.confirm-button');
+        if (confirmBtn) confirmBtn.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }, 100);
 
     // Сбрасываем флаг после завершения рендеринга
     setTimeout(() => {
