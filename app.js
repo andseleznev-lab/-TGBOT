@@ -30,7 +30,7 @@ const STATIC_SERVICES = [
         name: "Семейная консультация",
         description: "Консультация для пары или семьи",
         price: 10000,
-        duration: "2 часа",
+        duration: null,
         days: ["Вторник", "Четверг"]
     },
     {
@@ -38,7 +38,7 @@ const STATIC_SERVICES = [
         name: "Индивидуальная консультация",
         description: "Персональная консультация",
         price: 8000,
-        duration: "1 час",
+        duration: null,
         days: ["Вторник", "Четверг"]
     }
 ];
@@ -1775,7 +1775,7 @@ function renderServicesScreen() {
                         ${CONFIG.SERVICE_ICONS[service.name] ? `<div class="service-icon">${CONFIG.SERVICE_ICONS[service.name]}</div>` : ''}
                         <div class="service-info">
                             <div class="service-name">${escapeHtml(service.name)}</div>
-                            <div class="service-duration">${service.duration}</div>
+                            ${service.duration ? `<div class="service-duration">${service.duration}</div>` : ''}
                             ${service.id === 'package' && State.userPackage && State.userPackage.sessions_remaining > 0 ? `
                                 <div class="package-sessions-badge">Осталось ${State.userPackage.sessions_remaining} из ${State.userPackage.sessions_total} сессий</div>
                             ` : ''}
@@ -3281,7 +3281,7 @@ function getServiceDescription(serviceName) {
         'Вступить в клуб': 'Эксклюзивный доступ к закрытому сообществу и материалам',
         'Пакет консультаций': 'Выгодное предложение',
         'Семейная консультация': '2-х часовая сессия с парой или семьей',
-        'Индивидуальная консультация': '1 час'
+        'Индивидуальная консультация': '1 сессия длительностью 1 час'
     };
     return descriptions[serviceName] || '';
 }

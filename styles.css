@@ -284,6 +284,7 @@ body {
     cursor: pointer;
     transition: all var(--transition-normal);
     box-shadow: 0 4px 12px rgba(212, 165, 116, 0.3);
+    flex-shrink: 0;
 }
 
 .service-btn:hover {
