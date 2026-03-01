@@ -2194,6 +2194,10 @@ async function selectDate(dateStr) {
 
     renderBookingScreen();
 
+    // Скроллим к секции слотов после выбора даты
+    const slotsEl = document.querySelector('.slots-container');
+    if (slotsEl) slotsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
     // 🔧 HOTFIX v20: Debounce запроса к API
     State.selectDateDebounceTimer = setTimeout(async () => {
         try {
