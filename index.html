@@ -66,8 +66,9 @@
         </div>
     </div>
 
-    <!-- 🔧 КНОПКИ ОТЛАДКИ -->
-    <div id="debug-controls">
+    <!-- 🔧 ОТЛАДКА: кнопки скрыты, доступ через Eruda DevTools (плавающий значок снизу справа)
+         Функции доступны в консоли Eruda: downloadLogs(), copyLogs(), clearLogs() -->
+    <div id="debug-controls" style="display:none">
         <button class="debug-btn" onclick="downloadLogs()">📥 Скачать логи</button>
         <button class="debug-btn" onclick="copyLogs()">📋 Копировать</button>
         <button class="debug-btn" onclick="clearLogs()">🗑️ Очистить</button>
