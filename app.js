@@ -3729,6 +3729,18 @@ function renderClubScreen() {
                         <div class="service-description">
                             Эффективная работа с психологом в группе
                         </div>
+                        <div class="email-input-section">
+                            <label class="email-label">Email для чека</label>
+                            <input
+                                type="email"
+                                class="email-input"
+                                placeholder="example@mail.ru"
+                                value="${escapeHtml(State.userEmail || '')}"
+                                oninput="State.userEmail = this.value.trim()"
+                                onfocus="scrollToEmailInput(this)"
+                                autocomplete="email"
+                            />
+                        </div>
                         <div class="service-footer">
                             <div class="service-price">${formatPrice(CONFIG.CLUB.PRICE)}</div>
                             <button class="service-btn" onclick="handleClubPayment()">
@@ -3780,6 +3792,18 @@ function renderClubScreen() {
                         <div class="service-name">Увы, подписка закончилась</div>
                         <div class="service-duration">Следующий абонемент — 4 новые встречи</div>
                     </div>
+                </div>
+                <div class="email-input-section">
+                    <label class="email-label">Email для чека</label>
+                    <input
+                        type="email"
+                        class="email-input"
+                        placeholder="example@mail.ru"
+                        value="${escapeHtml(State.userEmail || '')}"
+                        oninput="State.userEmail = this.value.trim()"
+                        onfocus="scrollToEmailInput(this)"
+                        autocomplete="email"
+                    />
                 </div>
                 <div class="service-footer">
                     <div class="service-price">${formatPrice(CONFIG.CLUB.PRICE)}</div>
@@ -4261,12 +4285,22 @@ async function handleClubPayment() {
             tg.HapticFeedback.selectionChanged();
         }
 
+        // Валидация email
+        const email = (State.userEmail || '').trim();
+        if (!email || !email.includes('@')) {
+            tg.HapticFeedback?.notificationOccurred('error');
+            showToast('Введите email для получения чека');
+            State.isCreatingPayment = false;
+            return;
+        }
+
         // Показываем loading modal
         showLoadingModal('Создание платежа...');
 
         // Создаём платёж для клуба
         const paymentResult = await BookingAPI.request('create_payment', {
-            service: 'club'
+            service: 'club',
+            user_email: email
             // amount НЕ передаём - Make.com сам определяет по service_id из CONFIG.SERVICE_PRICES
         });
 
