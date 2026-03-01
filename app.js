@@ -353,7 +353,7 @@ function renderLockingSlot(slot) {
  * const paymentUrl = await createPayment('slot_123', 'single');
  * openPaymentWindow(paymentUrl);
  */
-async function createPayment(slotId, serviceId) {
+async function createPayment(slotId, serviceId, email) {
     try {
         console.log(`💳 [createPayment] Создание платежа для слота ${slotId}, услуга ${serviceId}`);
 
@@ -377,7 +377,8 @@ async function createPayment(slotId, serviceId) {
         // ⚠️ amount НЕ отправляем - Make.com сам определяет цену по service ID (security)
         const result = await BookingAPI.request('create_payment', {
             slot_id: slotId,
-            service: serviceId
+            service: serviceId,
+            user_email: email  // [T-012] Для фискального чека YooKassa
         });
 
         hideLoader();
@@ -731,7 +732,8 @@ const State = {
     isLoadingClub: false,  // [T-005] Флаг загрузки данных клуба
     clubZoomLink: '',  // [T-005] Ссылка на Zoom-встречу клуба
     clubPaymentProcessing: localStorage.getItem('clubPaymentProcessing') === 'true',  // [UX] Флаг создания встреч после оплаты (сохраняется между сессиями)
-    userPackage: null  // [T-010] Данные активного пакета консультаций {sessions_remaining, sessions_total, ...}
+    userPackage: null,  // [T-010] Данные активного пакета консультаций {sessions_remaining, sessions_total, ...}
+    userEmail: localStorage.getItem('user_email') || null  // [T-012] Email для фискального чека YooKassa
 };
 
 // 🔧 ИСПРАВЛЕНИЕ 2: Обработка visibility change для корректной работы при выходе/входе
@@ -1803,7 +1805,9 @@ function renderBookingScreen() {
     console.log(`🎨 renderBookingScreen: service=${State.selectedService}, date=${State.selectedDate}, slots=${State.availableSlots?.length || 0}, dates=${State.availableDates?.length || 0}`);
 
     const services = State.services.filter(s => !s.type || s.type !== 'info_button');
-    
+    const price = CONFIG.SERVICE_PRICES[State.selectedService];
+    const isPaidService = price && price > 0;
+
     const html = `
         <h1 class="screen-title fade-in">Запись на консультацию</h1>
         
@@ -1871,6 +1875,19 @@ function renderBookingScreen() {
             ` : ''}
             
             ${State.selectedSlot ? `
+                ${isPaidService ? `
+                <div class="email-input-section">
+                    <label class="email-label">Email для чека</label>
+                    <input
+                        type="email"
+                        class="email-input"
+                        placeholder="example@mail.ru"
+                        value="${escapeHtml(State.userEmail || '')}"
+                        oninput="State.userEmail = this.value.trim()"
+                        autocomplete="email"
+                    />
+                </div>
+                ` : ''}
                 <button class="confirm-button glass-card" onclick="confirmBooking()">
                     Подтвердить запись
                 </button>
@@ -2342,6 +2359,22 @@ async function confirmBooking() {
 
     // [T-003] Для платных услуг - создаём платёж через YooKassa
     if (isPaidService) {
+        // [T-012] Валидация email для фискального чека
+        const email = (State.userEmail || '').trim();
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!email) {
+            tg.HapticFeedback.notificationOccurred('error');
+            showSlotTakenPopup('Введите email для получения чека');
+            return;
+        }
+        if (!emailRegex.test(email)) {
+            tg.HapticFeedback.notificationOccurred('error');
+            showSlotTakenPopup('Введите корректный email');
+            return;
+        }
+        localStorage.setItem('user_email', email);
+        console.log('📧 [confirmBooking] Email для чека сохранён:', email.replace(/@.*/, '@***'));
+
         State.isBooking = true;  // Блокируем повторные клики
         try {
             // Находим слот в availableSlots чтобы получить slot.id
@@ -2358,7 +2391,7 @@ async function confirmBooking() {
             showLoadingModal('Создание платежа...');
 
             // Создаём платёж
-            const paymentResult = await createPayment(slot.id, State.selectedService);
+            const paymentResult = await createPayment(slot.id, State.selectedService, email);
 
             // Скрываем loading modal
             hideLoadingModal();
