@@ -397,6 +397,9 @@ Telegram User ID: ${window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 'unknow
     <script>
         eruda.init();
         eruda.hide();
+        // Скрываем сам DOM-элемент (кнопку-иконку), а не только панель
+        var erudaEl = document.getElementById('eruda');
+        if (erudaEl) erudaEl.style.display = 'none';
         console.log('🔧 Eruda DevTools initialized (hidden). Tap app title 5x to show.');
 
         // Секретный жест: 5 тапов по заголовку за 2 секунды
@@ -410,6 +413,8 @@ Telegram User ID: ${window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 'unknow
                 timer = setTimeout(function() { taps = 0; }, 2000);
                 if (taps >= 5) {
                     taps = 0;
+                    var erudaEl = document.getElementById('eruda');
+                    if (erudaEl) erudaEl.style.display = 'block';
                     eruda.show();
                 }
             });
