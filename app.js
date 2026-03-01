@@ -1809,7 +1809,7 @@ function renderBookingScreen() {
     const isPaidService = price && price > 0;
 
     const html = `
-        <h1 class="screen-title fade-in">Запись на консультацию</h1>
+        <h1 class="screen-title screen-title--diagnostic fade-in">Запись на консультацию</h1>
         
         <div class="booking-container fade-in">
             <div class="service-selector glass-card">
