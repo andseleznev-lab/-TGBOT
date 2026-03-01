@@ -1884,6 +1884,7 @@ function renderBookingScreen() {
                         placeholder="example@mail.ru"
                         value="${escapeHtml(State.userEmail || '')}"
                         oninput="State.userEmail = this.value.trim()"
+                        onfocus="setTimeout(() => this.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)"
                         autocomplete="email"
                     />
                 </div>
