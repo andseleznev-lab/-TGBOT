@@ -2272,7 +2272,7 @@ function selectSlot(time) {
 
     // [T-012] Скроллим к email-инпуту для платных услуг
     const emailEl = document.querySelector('.email-input-section');
-    if (emailEl) setTimeout(() => emailEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
+    if (emailEl) setTimeout(() => emailEl.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
 
     // Сбрасываем флаг после завершения рендеринга
     setTimeout(() => {
