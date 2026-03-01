@@ -1786,7 +1786,7 @@ function renderServicesScreen() {
                     </div>
                     <div class="service-footer">
                         <div class="service-price ${service.id === 'package' && State.userPackage ? 'active' : service.price === 0 ? 'free' : ''}">
-                            ${service.id === 'package' && State.userPackage ? 'Пакет активен' : service.price === 0 ? 'Бесплатно' : formatPrice(service.price)}
+                            ${service.id === 'package' && State.userPackage ? 'Пакет активен' : service.id === 'package' ? `<s>${formatPrice(80000)}</s> ${formatPrice(service.price)}` : service.price === 0 ? 'Бесплатно' : formatPrice(service.price)}
                         </div>
                         <button class="service-btn">
                             Записаться →
@@ -3277,11 +3277,11 @@ function scrollToEmailInput(el) {
 
 function getServiceDescription(serviceName) {
     const descriptions = {
-        'Диагностика': 'Первичная консультация для знакомства и определения запроса',
+        'Диагностика': 'Первая бесплатная консультация',
         'Вступить в клуб': 'Эксклюзивный доступ к закрытому сообществу и материалам',
-        'Пакет консультаций': 'Лучшее решение для работы с психологом',
-        'Семейная консультация': 'Работа с парой или семьёй, длительность 2 часа',
-        'Индивидуальная консультация': 'Персональная консультация с психологом, 1 час'
+        'Пакет консультаций': 'Выгодное предложение',
+        'Семейная консультация': '2-х часовая сессия с парой или семьей',
+        'Индивидуальная консультация': '1 час'
     };
     return descriptions[serviceName] || '';
 }
