@@ -21,7 +21,7 @@ const CONFIG = {
         /** Количество встреч в абонементе */
         MEETINGS_COUNT: 4,
         /** Время встреч (каждое воскресенье) */
-        MEETING_TIME: '17:00',
+        MEETING_TIME: '19:00',
         /** Zoom ссылка для встреч клуба */
         ZOOM_LINK: 'https://zoom.us/j/your-meeting-id'
     },
@@ -87,7 +87,7 @@ const CONFIG = {
             name: 'Пакет консультаций',
             description: '10 сессий',
             price: 75000,
-            duration: '10 сессий по 1 часу',
+            duration: '10 сессий',
             days: ['Вторник', 'Четверг']
         },
         {
