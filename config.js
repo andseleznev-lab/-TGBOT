@@ -20,7 +20,7 @@ const CONFIG = {
         PRICE: 2990,
         /** Количество встреч в абонементе */
         MEETINGS_COUNT: 4,
-        /** Время встреч (каждое воскресенье) */
+        /** Время встреч (каждую среду) */
         MEETING_TIME: '19:00',
         /** Zoom ссылка для встреч клуба */
         ZOOM_LINK: 'https://zoom.us/j/your-meeting-id'

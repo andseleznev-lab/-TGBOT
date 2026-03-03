@@ -730,7 +730,9 @@ const State = {
     isCreatingPayment: false,  // [T-003] Флаг создания платежа (защита от двойного клика из карточки бронирования)
     clubPayments: [],  // [T-005] Массив платежей клуба для текущего пользователя
     isLoadingClub: false,  // [T-005] Флаг загрузки данных клуба
-    clubZoomLink: '',  // [T-005] Ссылка на Zoom-встречу клуба
+    clubZoomLink: '',  // [T-005] Ссылка на Zoom-встречу клуба (legacy)
+    clubMeetings: [],  // [T-013] Расписание встреч из club_meetings
+    clubRegistrations: {},  // [T-013] Map: meeting_id → zoom_join_url
     clubPaymentProcessing: localStorage.getItem('clubPaymentProcessing') === 'true',  // [UX] Флаг создания встреч после оплаты (сохраняется между сессиями)
     userPackage: null,  // [T-010] Данные активного пакета консультаций {sessions_remaining, sessions_total, ...}
     userEmail: localStorage.getItem('user_email') || null  // [T-012] Email для фискального чека YooKassa
@@ -3289,48 +3291,48 @@ function getServiceDescription(serviceName) {
 // ===== [T-005] ФУНКЦИИ КЛУБА =====
 
 /**
- * Рассчитывает следующие N воскресений начиная с указанной даты
+ * Рассчитывает следующие N сред начиная с указанной даты
  * @param {Date} startDate - Дата начала отсчета
- * @param {number} count - Количество воскресений (по умолчанию 4)
- * @returns {Date[]} Массив дат воскресений
+ * @param {number} count - Количество сред (по умолчанию 4)
+ * @returns {Date[]} Массив дат сред
  */
-function getNextSundays(startDate, count = 4) {
+function getNextWednesdays(startDate, count = 4) {
     try {
         // Валидация входных данных
         if (!(startDate instanceof Date) || isNaN(startDate.getTime())) {
-            console.error('getNextSundays: невалидная дата', startDate);
+            console.error('getNextWednesdays: невалидная дата', startDate);
             return [];
         }
 
         if (count < 1) {
-            console.error('getNextSundays: count должен быть >= 1', count);
+            console.error('getNextWednesdays: count должен быть >= 1', count);
             return [];
         }
 
-        const sundays = [];
+        const wednesdays = [];
         const current = new Date(startDate);
 
-        // Находим ближайшее воскресенье (день недели 0)
-        const daysUntilSunday = (7 - current.getDay()) % 7;
+        // Находим ближайшую среду (день недели 3)
+        const daysUntilWednesday = (3 - current.getDay() + 7) % 7;
 
-        // Если сегодня не воскресенье, переходим к ближайшему
-        if (daysUntilSunday > 0) {
-            current.setDate(current.getDate() + daysUntilSunday);
+        // Если сегодня не среда, переходим к ближайшей
+        if (daysUntilWednesday > 0) {
+            current.setDate(current.getDate() + daysUntilWednesday);
         }
-        // Если сегодня воскресенье, берём следующее
-        else if (current.getDay() === 0) {
+        // Если сегодня среда, берём следующую
+        else if (current.getDay() === 3) {
             current.setDate(current.getDate() + 7);
         }
 
-        // Собираем N воскресений
+        // Собираем N сред
         for (let i = 0; i < count; i++) {
-            sundays.push(new Date(current));
-            current.setDate(current.getDate() + 7);  // +7 дней для следующего воскресенья
+            wednesdays.push(new Date(current));
+            current.setDate(current.getDate() + 7);  // +7 дней для следующей среды
         }
 
-        return sundays;
+        return wednesdays;
     } catch (error) {
-        console.error('getNextSundays: ошибка при расчете воскресений', error);
+        console.error('getNextWednesdays: ошибка при расчете сред', error);
         return [];
     }
 }
@@ -3379,7 +3381,7 @@ async function loadUserPayments(userId) {
 }
 
 /**
- * [T-006] Вычисляет 4 встречи клуба (воскресенья) начиная с даты платежа
+ * [T-006] Вычисляет 4 встречи клуба (среды) начиная с даты платежа
  * @param {string|Date} paymentDate - Дата платежа (ISO string или Date объект)
  * @returns {Array<Object>} Массив из 4 встреч: [{date: Date, formatted: "DD.MM.YYYY", time: "17:00"}]
  */
@@ -3393,11 +3395,11 @@ function calculateMeetings(paymentDate) {
             return [];
         }
 
-        // Используем существующую функцию для вычисления воскресений
-        const sundays = getNextSundays(date, CONFIG.CLUB.MEETINGS_COUNT);
+        // Используем существующую функцию для вычисления сред
+        const sundays = getNextWednesdays(date, CONFIG.CLUB.MEETINGS_COUNT);
 
         if (sundays.length === 0) {
-            console.error('❌ [calculateMeetings] Не удалось вычислить воскресенья');
+            console.error('❌ [calculateMeetings] Не удалось вычислить среды');
             return [];
         }
 
@@ -3451,10 +3453,34 @@ async function loadClubData(forceRefresh = false) {
                     user_id: p.telegram_user_id // Алиас для совместимости
                 }));
 
-                // Берём zoom_link из первого платежа (все платежи имеют одинаковую ссылку)
-                // Fallback на CONFIG если у платежа нет ссылки
+                // Берём zoom_link из первого платежа (legacy fallback)
                 State.clubZoomLink = payments[0]?.zoom_link || CONFIG.CLUB.ZOOM_LINK;
                 console.log(`✅ [loadClubData] Supabase: найдено ${State.clubPayments.length} платежей`);
+
+                // [T-013] Параллельно загружаем расписание встреч и регистрации пользователя
+                const cutoffDate = new Date();
+                cutoffDate.setDate(cutoffDate.getDate() - 28);
+                const cutoffStr = cutoffDate.toISOString().slice(0, 10);
+
+                const [meetingsResult, registrationsResult] = await Promise.all([
+                    supabaseClient
+                        .from('club_meetings')
+                        .select('id, meeting_date')
+                        .gte('meeting_date', cutoffStr)
+                        .order('meeting_date'),
+                    supabaseClient
+                        .from('club_registrations')
+                        .select('meeting_id, zoom_join_url')
+                        .eq('telegram_user_id', USER.id)
+                ]);
+
+                if (meetingsResult.data) State.clubMeetings = meetingsResult.data;
+                if (registrationsResult.data) {
+                    State.clubRegistrations = Object.fromEntries(
+                        registrationsResult.data.map(r => [r.meeting_id, r.zoom_join_url])
+                    );
+                }
+                console.log(`✅ [loadClubData] Meetings: ${State.clubMeetings.length}, Registrations: ${Object.keys(State.clubRegistrations).length}`);
 
                 // Сбрасываем флаг создания встреч если платежи появились
                 if (State.clubPayments.length > 0 && State.clubPaymentProcessing) {
@@ -3569,8 +3595,8 @@ async function loadClubData(forceRefresh = false) {
  * Рендерит HTML карточки встречи клуба
  * @param {Object} meeting - Объект встречи
  * @param {Date} meeting.date - Дата встречи
- * @param {string} meeting.time - Время встречи (например, "17:00")
- * @param {string} meeting.zoomLink - Ссылка на Zoom встречу
+ * @param {string} meeting.time - Время встречи (например, "19:00")
+ * @param {string|null} meeting.zoomLink - Персональная ссылка Zoom (null если ещё не готова)
  * @returns {string} HTML строка карточки встречи
  */
 function renderClubMeetingCard(meeting) {
@@ -3586,12 +3612,7 @@ function renderClubMeetingCard(meeting) {
             return '';
         }
 
-        if (!meeting.zoomLink || typeof meeting.zoomLink !== 'string') {
-            console.error('renderClubMeetingCard: невалидная ссылка Zoom', meeting);
-            return '';
-        }
-
-        // Форматируем дату: "Воскресенье, 16 февраля"
+        // Форматируем дату: "Среда, 12 марта"
         const dayName = meeting.date.toLocaleDateString('ru-RU', { weekday: 'long' });
         const day = meeting.date.getDate();
         const monthName = meeting.date.toLocaleDateString('ru-RU', { month: 'long' });
@@ -3614,11 +3635,15 @@ function renderClubMeetingCard(meeting) {
                     <div class="service-footer">
                         <div class="service-price" style="opacity: 0.5;">Встреча завершена</div>
                     </div>
-                ` : `
+                ` : meeting.zoomLink ? `
                     <div class="service-footer">
                         <button class="service-btn" onclick="openZoomLink('${escapeHtml(meeting.zoomLink)}')">
                             Подключиться к Zoom →
                         </button>
+                    </div>
+                ` : `
+                    <div class="service-footer">
+                        <div class="service-price" style="opacity: 0.5;">Ссылка появится позже</div>
                     </div>
                 `}
             </div>
@@ -3645,7 +3670,7 @@ function renderClubScreen() {
         // 1. Показываем loader при загрузке
         if (State.isLoadingClub) {
             container.innerHTML = `
-                <h1 class="screen-title screen-title--diagnostic fade-in">Встречи клуба - каждое воскресенье в ${CONFIG.CLUB.MEETING_TIME}</h1>
+                <h1 class="screen-title screen-title--diagnostic fade-in">Встречи клуба — каждую среду в ${CONFIG.CLUB.MEETING_TIME}</h1>
                 <div class="services-grid fade-in">
                     <div class="service-card glass-card" style="text-align: center; padding: 40px 20px;">
                         <div class="dates-spinner"></div>
@@ -3665,7 +3690,7 @@ function renderClubScreen() {
             const pendingPayment = pendingPayments[0]; // Берём первый pending
 
             container.innerHTML = `
-                <h1 class="screen-title screen-title--diagnostic fade-in">Встречи клуба - каждое воскресенье в ${CONFIG.CLUB.MEETING_TIME}</h1>
+                <h1 class="screen-title screen-title--diagnostic fade-in">Встречи клуба — каждую среду в ${CONFIG.CLUB.MEETING_TIME}</h1>
                 <div class="services-grid fade-in">
                     <div class="service-card glass-card">
                         <div class="service-header">
@@ -3694,7 +3719,7 @@ function renderClubScreen() {
             // 4a. Если оплата в процессе (GitHub deployment delay) - показываем лоадер
             if (State.clubPaymentProcessing) {
                 container.innerHTML = `
-                    <h1 class="screen-title screen-title--diagnostic fade-in">Встречи клуба - каждое воскресенье в ${CONFIG.CLUB.MEETING_TIME}</h1>
+                    <h1 class="screen-title screen-title--diagnostic fade-in">Встречи клуба — каждую среду в ${CONFIG.CLUB.MEETING_TIME}</h1>
                     <div class="services-grid fade-in">
                         <div class="service-card glass-card">
                             <div class="service-header">
@@ -3717,13 +3742,13 @@ function renderClubScreen() {
 
             // 4b. Обычная карточка "Вступить в клуб"
             container.innerHTML = `
-                <h1 class="screen-title screen-title--diagnostic fade-in">Встречи клуба - каждое воскресенье в ${CONFIG.CLUB.MEETING_TIME}</h1>
+                <h1 class="screen-title screen-title--diagnostic fade-in">Встречи клуба — каждую среду в ${CONFIG.CLUB.MEETING_TIME}</h1>
                 <div class="services-grid fade-in">
                     <div class="service-card glass-card">
                         <div class="service-header">
                             <div class="service-info">
                                 <div class="service-name">Закрытый психологический клуб</div>
-                                <div class="service-duration">4 встречи по воскресеньям</div>
+                                <div class="service-duration">4 встречи по средам</div>
                             </div>
                         </div>
                         <div class="service-description">
@@ -3761,26 +3786,38 @@ function renderClubScreen() {
             return currentDate > latestDate ? current : latest;
         }, successPayments[0]);
 
-        // Рассчитываем 4 воскресенья от даты платежа
+        // [T-013] Используем расписание из club_meetings; fallback — расчётные среды от даты платежа
         const paidDate = new Date(latestPayment.paid_at);
-        const sundays = getNextSundays(paidDate, CONFIG.CLUB.MEETINGS_COUNT);
+        let meetingDates;
+        if (State.clubMeetings.length > 0) {
+            meetingDates = State.clubMeetings.map(m => ({
+                id: m.id,
+                date: new Date(m.meeting_date + 'T00:00:00')
+            }));
+        } else {
+            meetingDates = getNextWednesdays(paidDate, CONFIG.CLUB.MEETINGS_COUNT).map(d => ({
+                id: null,
+                date: d
+            }));
+        }
 
         // Фильтруем прошедшие встречи (сравниваем только даты, без времени)
         const now = new Date();
         now.setHours(0, 0, 0, 0);  // Обнуляем время для корректного сравнения
 
-        const upcomingMeetings = sundays.filter(sunday => {
-            const meetingDate = new Date(sunday);
+        const upcomingMeetings = meetingDates.filter(m => {
+            const meetingDate = new Date(m.date);
             meetingDate.setHours(0, 0, 0, 0);
             return meetingDate >= now;
         });
 
         // Формируем карточки встреч
-        const meetingCards = sundays.map(sunday => {
+        const meetingCards = meetingDates.map(m => {
+            const zoomLink = m.id ? (State.clubRegistrations[m.id] || null) : null;
             return renderClubMeetingCard({
-                date: sunday,
+                date: m.date,
                 time: CONFIG.CLUB.MEETING_TIME,
-                zoomLink: State.clubZoomLink
+                zoomLink: zoomLink
             });
         }).join('');
 
@@ -3815,7 +3852,7 @@ function renderClubScreen() {
         ` : '';
 
         container.innerHTML = `
-            <h1 class="screen-title screen-title--diagnostic fade-in">Встречи клуба - каждое воскресенье в ${CONFIG.CLUB.MEETING_TIME}</h1>
+            <h1 class="screen-title screen-title--diagnostic fade-in">Встречи клуба — каждую среду в ${CONFIG.CLUB.MEETING_TIME}</h1>
             <div class="services-grid fade-in">
                 ${meetingCards}
                 ${renewButton}
@@ -3857,9 +3894,9 @@ function showClubPaymentConfirmModal(paymentData) {
             tg.HapticFeedback.impactOccurred('light');
         }
 
-        // Получаем даты следующих 4 воскресений
-        const nextSundays = getNextSundays(new Date(), 4);
-        const sundaysText = nextSundays
+        // Получаем даты следующих 4 сред
+        const nextWednesdays = getNextWednesdays(new Date(), 4);
+        const sundaysText = nextWednesdays
             .map(date => formatDateDMY(date))
             .join(', ');
 
@@ -3877,7 +3914,7 @@ function showClubPaymentConfirmModal(paymentData) {
                     <div class="payment-modal-body">
                         <div class="payment-detail">
                             <div class="payment-detail-label">Встречи</div>
-                            <div class="payment-detail-value">${CONFIG.CLUB.MEETINGS_COUNT} воскресенья в ${CONFIG.CLUB.MEETING_TIME}</div>
+                            <div class="payment-detail-value">${CONFIG.CLUB.MEETINGS_COUNT} встречи в ${CONFIG.CLUB.MEETING_TIME}</div>
                         </div>
                         <div class="payment-detail">
                             <div class="payment-detail-label">Даты</div>
